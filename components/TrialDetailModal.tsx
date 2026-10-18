@@ -13,6 +13,8 @@ import type { ClinicalTrialSummary } from '@/types/trial';
 import { useLibrary } from '@/lib/store';
 import { vancouverCitation } from '@/lib/export';
 import { Modal, Pill } from './ui';
+import { TreatmentProtocol } from './TreatmentProtocol';
+import { classifyDisease, diseaseLabel } from '@/lib/diseases';
 
 export function TrialDetailModal({
   trial: t,
@@ -52,6 +54,12 @@ export function TrialDetailModal({
       {t && (
         <>
           <div className="detail-heading">
+            <div className="disease-tags" title={classifyDisease(t).basis}>
+              {classifyDisease(t).ids.map((id) => (
+                <span key={id}>{diseaseLabel(id)}</span>
+              ))}
+              <small>{classifyDisease(t).basis}</small>
+            </div>
             <div className="card-tags">
               {t.specialties.map((s) => (
                 <Pill key={s} tone="indigo">
@@ -147,6 +155,7 @@ export function TrialDetailModal({
                     )}
                   </div>
                 </section>
+                <TreatmentProtocol key={t.pmid} trial={t} />
                 <section>
                   <h3>Outcomes & clinical relevance</h3>
                   <div className="outcome-highlight">

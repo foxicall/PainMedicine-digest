@@ -211,3 +211,27 @@ export async function searchPubMed(query: string, signal?: AbortSignal) {
     fetched: result.idlist.length,
   };
 }
+
+// Independent of the legacy RCT/year search: newer/nonrandomized indexed trials
+// must also be able to retrieve their original abstract. Never infer a dose.
+export async function fetchStudyAbstract(pmid: string, signal?: AbortSignal) {
+  if (!/^\d{1,10}$/.test(pmid)) throw new Error('Invalid PubMed identifier.');
+  const xml = await ncbiRequest('efetch.fcgi', { id: pmid, retmode: 'xml' }, signal);
+  const doc = new DOMParser().parseFromString(xml, 'application/xml');
+  if (doc.querySelector('parsererror, ERROR'))
+    throw new Error('PubMed returned an invalid article response.');
+  const article = Array.from(doc.querySelectorAll('PubmedArticle')).find(
+    (a) => text(a, 'MedlineCitation > PMID') === pmid,
+  );
+  if (!article) throw new Error('The requested PubMed article was not returned.');
+  return {
+    pmid,
+    abstract:
+      Array.from(article.querySelectorAll('Article > Abstract > AbstractText'))
+        .map(
+          (el) =>
+            `${el.getAttribute('Label') ? `${el.getAttribute('Label')}: ` : ''}${el.textContent?.trim() ?? ''}`,
+        )
+        .join('\n\n') || null,
+  };
+}

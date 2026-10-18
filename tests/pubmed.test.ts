@@ -1,11 +1,34 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { parsePubMedXML, publicationEndDate, searchPubMed } from '@/lib/pubmed';
+import { fetchStudyAbstract, parsePubMedXML, publicationEndDate, searchPubMed } from '@/lib/pubmed';
 
 const article = (id = '12345678', year = '2024', type = 'Randomized Controlled Trial') =>
   `<PubmedArticle><MedlineCitation><PMID>${id}</PMID><Article><Journal><Title>PAIN</Title><ISOAbbreviation>Pain</ISOAbbreviation><JournalIssue><Volume>165</Volume><Issue>1</Issue><PubDate><Year>${year}</Year></PubDate></JournalIssue></Journal><ArticleTitle>Pregabalin for <i>neuropathic</i> pain</ArticleTitle><AuthorList><Author><LastName>Smith</LastName><Initials>AB</Initials></Author><Author><LastName>Jones</LastName><Initials>CD</Initials></Author></AuthorList><Abstract><AbstractText Label="RESULTS">Patient outcomes.</AbstractText></Abstract><PublicationTypeList><PublicationType>${type}</PublicationType></PublicationTypeList></Article></MedlineCitation><PubmedData><ArticleIdList><ArticleId IdType="doi">10.1000/target</ArticleId></ArticleIdList><ReferenceList><Reference><ArticleIdList><ArticleId IdType="doi">10.1000/wrong-reference</ArticleId></ArticleIdList></Reference></ReferenceList></PubmedData></PubmedArticle>`;
 afterEach(() => vi.unstubAllGlobals());
 describe('PubMed parsing and eligibility', () => {
+  it('fetches a newer nonrandomized study abstract without creating an appraised dose', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(
+            `<PubmedArticleSet>${article('12345678', '2027', 'Clinical Trial')}</PubmedArticleSet>`,
+          ),
+        ),
+    );
+    const result = await fetchStudyAbstract('12345678');
+    expect(result).toEqual({ pmid: '12345678', abstract: 'RESULTS: Patient outcomes.' });
+  });
+  it('rejects a mismatched abstract instead of attributing another study’s intervention', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(new Response(`<PubmedArticleSet>${article('111')}</PubmedArticleSet>`)),
+    );
+    await expect(fetchStudyAbstract('222')).rejects.toThrow('not returned');
+  });
   it('parses bibliographic metadata without inventing clinical findings', () => {
     const [t] = parsePubMedXML(`<PubmedArticleSet>${article()}</PubmedArticleSet>`);
     expect(t.title).toBe('Pregabalin for neuropathic pain');

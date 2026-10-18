@@ -1,4 +1,5 @@
 import metadata from './pubmed-metadata.json';
+import { treatmentProtocols } from './treatment-protocols';
 import type { ClinicalTrialSummary, Specialty, InterventionType } from '@/types/trial';
 
 // Abstract-based demo library, not an exhaustive systematic review.
@@ -90,6 +91,7 @@ function trial(s: SeedInput): ClinicalTrialSummary {
       sourceUrl: `https://pubmed.ncbi.nlm.nih.gov/${s.pmid}/`,
     },
     abstract: null,
+    treatmentProtocol: treatmentProtocols[s.pmid],
   };
 }
 
@@ -188,7 +190,7 @@ export const seedTrials: ClinicalTrialSummary[] = [
     bottomLine:
       'Monthly galcanezumab reduced migraine headache days more than placebo. The 120-mg and 240-mg doses showed similar efficacy over six months.',
     population: 'Adults 18–65 with 4–14 migraine headache days/month.',
-    intervention: 'Galcanezumab 120 or 240 mg subcutaneously every month.',
+    intervention: 'Galcanezumab SC monthly: 120 mg after a 240 mg loading dose, or 240 mg monthly.',
     comparator: 'Monthly placebo; no other preventive medication.',
     label: 'Change in monthly migraine headache days',
     value: '−4.7 vs −2.8',
@@ -215,7 +217,7 @@ export const seedTrials: ClinicalTrialSummary[] = [
     bottomLine:
       'Galcanezumab improved migraine frequency versus placebo in a second phase 3 trial. Injection-site reactions were more frequent with active treatment.',
     population: 'Episodic migraine; global multicenter cohort.',
-    intervention: 'Galcanezumab 120 or 240 mg subcutaneously monthly.',
+    intervention: 'Galcanezumab SC monthly: 120 mg after a 240 mg loading dose, or 240 mg monthly.',
     comparator: 'Monthly placebo.',
     label: 'Change in monthly migraine headache days',
     value: '−4.3 vs −2.3',
@@ -343,7 +345,8 @@ export const seedTrials: ClinicalTrialSummary[] = [
     duration: '3-month primary endpoint',
     bottomLine:
       'Adding radiofrequency denervation to exercise did not produce a clinically important pain benefit in these three pragmatic trials.',
-    population: 'Chronic low back pain with positive diagnostic blocks; failed conservative care.',
+    population:
+      'Chronic low back pain after failed conservative care. Facet/SI cohorts: positive blocks; combined cohort randomized before diagnostic testing.',
     intervention: 'Radiofrequency denervation plus a 3-month standardized exercise program.',
     comparator: 'Exercise program with psychological support as needed.',
     label: 'Pain intensity: facet-joint trial',

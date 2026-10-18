@@ -217,3 +217,13 @@ LocalStorage key: `pain-digest-library-v1`. Notes and bookmarks do not synchroni
 ## Deployment status
 
 The live site is [Pain Medicine Trial Digest](https://foxicall.github.io/PainMedicine-digest/). Check the Pages deployment run for the revision currently published. Scheduled workflows run only from the default branch; a feature branch alone does not activate daily refreshes.
+
+### Disease navigation and intervention protocols
+
+The curated library groups studies by disease by default. The disease selector also applies to all three automatically refreshed PubMed feeds. Conditions can overlap (SPACE is visible under both back pain and osteoarthritis), but the grouped library renders each record only once. Index classification uses title keywords and is explicitly unconfirmed; ambiguous records remain under “Other / unclassified pain.” A drug name alone does not establish a diagnosis or migraine subtype. The official guideline-source directory retains its independent country filter.
+
+All 12 starter digests have study-specific intervention records in `data/treatment-protocols.ts`, using `types/protocol.ts`. They separate treatment arms, diagnostic injections, oral/SC/IV routes, dose, concentration/volume, loading/titration/taper, schedules, anatomical targets, and device or lesion parameters. Every arm links to its report, protocol, supplement, or explicitly identified regulatory review. Missing values are displayed as **Not extracted**. Drug-label dosing is never substituted for a study regimen; protocol maxima and observed device-setting averages are labeled separately. Protocol-source checks do not constitute a formal risk-of-bias appraisal.
+
+The 37k+ live index is bibliographic metadata, not 37k+ reviewed dosing summaries. Unappraised digests show missing intervention fields and can retrieve the original PubMed abstract on demand with the existing throttled EFetch client. The complete abstract is displayed verbatim as unappraised source material; no treatment dose is inferred automatically. Browser/network restrictions or absent abstracts produce an explicit message and source link. The daily update workflow refreshes the index; new regimen dossiers still require source verification.
+
+Comparison and CSV export include diseases, arm-specific dosing/procedures, references, verification dates and extraction gaps. Existing saved trials and notes remain compatible. To add an appraised regimen, key its dossier by PMID in `data/treatment-protocols.ts`, add a reviewed population mapping in `lib/diseases.ts`, and attach it to the corresponding summary. Run `npm test`, `npm run test:pipeline`, and `npm run build:preview` before deployment.

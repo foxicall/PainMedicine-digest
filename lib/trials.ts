@@ -1,8 +1,10 @@
 import Fuse from 'fuse.js';
 import type { ClinicalTrialSummary, TrialFilters } from '@/types/trial';
+import { classifyDisease, diseaseLabel } from './diseases';
 
 export const defaultFilters: TrialFilters = {
   query: '',
+  disease: 'all',
   specialties: [],
   years: [2016, Math.max(2026, new Date().getUTCFullYear())],
   minSample: 0,
@@ -12,6 +14,11 @@ export const defaultFilters: TrialFilters = {
 
 export function searchTrials(trials: ClinicalTrialSummary[], query: string) {
   if (!query.trim()) return trials;
+  const identifier = query.trim().toLowerCase();
+  const exactStudy = trials.filter(
+    (t) => t.pmid === identifier || t.acronym.toLowerCase() === identifier,
+  );
+  if (exactStudy.length) return exactStudy;
   const fuse = new Fuse(trials, {
     keys: [
       { name: 'acronym', weight: 2 },
@@ -20,6 +27,8 @@ export function searchTrials(trials: ClinicalTrialSummary[], query: string) {
       'bottomLine',
       'pico.population',
       'pico.intervention',
+      'treatmentProtocol.summary',
+      'treatmentProtocol.arms.agentOrProcedure',
       'specialties',
       'authors',
       'pmid',
@@ -45,6 +54,7 @@ export function filterTrials(trials: ClinicalTrialSummary[], filters: TrialFilte
     (t) =>
       t.year >= filters.years[0] &&
       t.year <= filters.years[1] &&
+      (filters.disease === 'all' || classifyDisease(t).ids.includes(filters.disease)) &&
       (!filters.specialties.length || filters.specialties.some((s) => t.specialties.includes(s))) &&
       (!filters.minSample || (t.sampleSize !== null && t.sampleSize >= filters.minSample)) &&
       (!filters.interventions.length ||
@@ -56,11 +66,26 @@ export function filterTrials(trials: ClinicalTrialSummary[], filters: TrialFilte
 export function activeFilterCount(f: TrialFilters) {
   return (
     f.specialties.length +
+    Number(f.disease !== 'all') +
     f.interventions.length +
     Number(f.minSample > 0) +
     Number(f.highImpactOnly) +
     Number(f.years[0] !== defaultFilters.years[0] || f.years[1] !== defaultFilters.years[1])
   );
+}
+
+export function groupTrialsByDisease(
+  trials: ClinicalTrialSummary[],
+  disease: TrialFilters['disease'],
+) {
+  const groups = new Map<string, ClinicalTrialSummary[]>();
+  for (const trial of trials) {
+    // A multi-condition study appears once, with all population labels on its card.
+    const id = disease === 'all' ? classifyDisease(trial).ids[0] : disease;
+    const name = diseaseLabel(id);
+    groups.set(name, [...(groups.get(name) ?? []), trial]);
+  }
+  return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
 }
 
 export function mergeTrials(local: ClinicalTrialSummary[], incoming: ClinicalTrialSummary[]) {

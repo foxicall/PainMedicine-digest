@@ -34,6 +34,26 @@ const renderPage = () =>
   );
 
 describe('reading workflow', () => {
+  it('filters by disease and displays sourced regimens in the digest', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByRole('button', { name: 'Clinical digests' }));
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Disease / condition' }),
+      'osteoarthritis',
+    );
+    expect(screen.getAllByRole('article')).toHaveLength(1);
+    expect(
+      (screen.getByRole('checkbox', { name: 'Group by disease' }) as HTMLInputElement).checked,
+    ).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Read digest' }));
+    const dialog = within(screen.getByRole('dialog'));
+    expect(dialog.getByRole('heading', { name: 'Intervention protocol & dosing' })).toBeTruthy();
+    expect(dialog.getByText(/Protocol ceiling: 100/)).toBeTruthy();
+    expect(
+      dialog.getAllByRole('link', { name: /SPACE: primary randomized trial/ }).length,
+    ).toBeGreaterThan(0);
+  });
   it('searches, saves a trial, writes notes, and persists the library', async () => {
     const user = userEvent.setup();
     renderPage();

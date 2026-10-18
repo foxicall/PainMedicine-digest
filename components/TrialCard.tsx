@@ -14,6 +14,7 @@ import type { ClinicalTrialSummary } from '@/types/trial';
 import { Pill } from './ui';
 import { useLibrary } from '@/lib/store';
 import { vancouverCitation } from '@/lib/export';
+import { classifyDisease, diseaseLabel } from '@/lib/diseases';
 
 export interface TrialCardProps {
   trial: ClinicalTrialSummary;
@@ -67,6 +68,11 @@ export function TrialCard({ trial: t, onOpen, notify }: TrialCardProps) {
       <div className="study-kicker">
         {t.acronym} <span>•</span> {t.year}
       </div>
+      <div className="disease-tags" title={classifyDisease(t).basis}>
+        {classifyDisease(t).ids.map((id) => (
+          <span key={id}>{diseaseLabel(id)}</span>
+        ))}
+      </div>
       <h3>
         <button onClick={() => onOpen(t)}>{t.displayTitle}</button>
       </h3>
@@ -119,6 +125,16 @@ export function TrialCard({ trial: t, onOpen, notify }: TrialCardProps) {
             </p>
           </div>
         ))}
+      </div>
+      <div className="protocol-preview">
+        <div className="section-eyebrow">INTERVENTION & DOSING</div>
+        <p>
+          {t.treatmentProtocol?.summary ??
+            'Study-specific procedure and dose not yet extracted. Open the digest to retrieve the source abstract.'}
+        </p>
+        <button className="text-button" onClick={() => onOpen(t)}>
+          View regimen & sources <ArrowUpRight size={13} />
+        </button>
       </div>
       <div className={`outcome-highlight ${t.outcome.kind === 'unreviewed' ? 'unreviewed' : ''}`}>
         <div>

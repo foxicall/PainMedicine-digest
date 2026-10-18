@@ -1,4 +1,6 @@
 import type { ClinicalTrialSummary } from '@/types/trial';
+import { classifyDisease, diseaseLabel } from './diseases';
+import { protocolText } from '@/types/protocol';
 
 export function vancouverCitation(t: ClinicalTrialSummary) {
   const authors = t.authors.slice(0, 6).join(', ') + (t.authors.length > 6 ? ', et al' : '');
@@ -22,6 +24,12 @@ export function toCSV(trials: ClinicalTrialSummary[], notes: Record<string, stri
     'Year',
     'PMID',
     'DOI',
+    'Diseases',
+    'Disease classification basis',
+    'Procedure and dosage by arm',
+    'Regimen source URLs',
+    'Regimen source check date',
+    'Regimen gaps',
     'Sample size',
     'Sample basis',
     'Clinical takeaway',
@@ -57,6 +65,12 @@ export function toCSV(trials: ClinicalTrialSummary[], notes: Record<string, stri
         t.year,
         t.pmid,
         t.doi,
+        classifyDisease(t).ids.map(diseaseLabel).join('; '),
+        classifyDisease(t).basis,
+        protocolText(t.treatmentProtocol),
+        t.treatmentProtocol?.sources.map((s) => s.url).join('; ') ?? '',
+        t.treatmentProtocol?.checkedOn ?? '',
+        t.treatmentProtocol?.gaps.join('; ') ?? 'Awaiting extraction',
         t.sampleSize,
         t.sampleSizeBasis,
         t.bottomLine,

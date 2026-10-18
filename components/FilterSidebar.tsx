@@ -1,3 +1,6 @@
+import { useMemo } from 'react';
+import { DiseaseSelect } from './DiseaseSelect';
+import { diseaseCounts } from '@/lib/diseases';
 import {
   Activity,
   Brain,
@@ -36,6 +39,7 @@ export function FilterSidebar({
 }) {
   const update = (patch: Partial<TrialFilters>) => onChange({ ...filters, ...patch });
   const total = activeFilterCount(filters);
+  const counts = useMemo(() => diseaseCounts(trials), [trials]);
   return (
     <div className="filter-inner">
       <div className="filter-title">
@@ -49,6 +53,14 @@ export function FilterSidebar({
         >
           <RotateCcw size={13} /> Reset{total > 0 ? ` (${total})` : ''}
         </button>
+      </div>
+      <div className="filter-section disease-filter">
+        <DiseaseSelect
+          value={filters.disease}
+          onChange={(disease) => update({ disease })}
+          counts={counts}
+        />
+        <p className="filter-hint">Studies can include more than one condition.</p>
       </div>
       <fieldset className="filter-section">
         <legend>SUBSPECIALTY</legend>

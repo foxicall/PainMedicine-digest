@@ -516,3 +516,275 @@
     font-size: 8px;
   }
 }
+
+/* Disease-led reading and source-linked treatment protocols. */
+.disease-select {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  color: #454963;
+}
+.disease-select > span {
+  font-size: 12px;
+  font-weight: 700;
+}
+.disease-select select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 11px 30px 11px 12px;
+  border: 1px solid #cdd0df;
+  border-radius: 8px;
+  background: #fff;
+  color: #303750;
+  font-size: 13px;
+}
+.disease-select select:focus-visible {
+  outline: 3px solid #c4c9ec;
+  outline-offset: 2px;
+}
+.watch-disease-row {
+  display: grid;
+  grid-template-columns: minmax(260px, 390px) 1fr;
+  align-items: end;
+  gap: 24px;
+  padding: 18px 0 24px;
+}
+.watch-disease-row p,
+.grouping-note {
+  color: #62697e;
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 0;
+}
+.disease-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin: 10px 0;
+}
+.disease-tags > span,
+.record-tags .record-disease {
+  color: #4a4880;
+  background: #efedf8;
+  border: 1px solid #e2dff0;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.disease-tags small {
+  color: #73788c;
+  font-size: 11px;
+}
+.group-disease-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.group-disease-toggle input {
+  accent-color: #595a94;
+  width: 14px;
+  height: 14px;
+}
+.display-controls {
+  flex-wrap: wrap;
+}
+.disease-library-group {
+  margin: 26px 0 34px;
+}
+.disease-group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid #d8dbe8;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+}
+.disease-group-heading h3 {
+  font:
+    700 19px/1.4 'Manrope',
+    sans-serif;
+  color: #353c58;
+  margin: 0;
+}
+.disease-group-heading > span {
+  font-size: 11px;
+  color: #73788c;
+  white-space: nowrap;
+}
+.protocol-preview {
+  padding: 15px 0;
+  border-top: 1px solid #e7e8ef;
+}
+.protocol-preview p {
+  font-size: 13px;
+  line-height: 1.75;
+  color: #4b526b;
+  margin: 9px 0;
+}
+.protocol-preview .text-button {
+  font-size: 12px;
+  color: #55538d;
+}
+.protocol-context {
+  font-size: 12px !important;
+  color: #72778b;
+}
+.protocol-arms {
+  display: grid;
+  gap: 18px;
+  margin-top: 20px;
+}
+.protocol-arm {
+  border: 1px solid #dcdfea;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+.protocol-arm-heading {
+  padding: 15px 18px;
+  background: #f1f0f8;
+  border-bottom: 1px solid #e2e1ef;
+}
+.protocol-arm-heading > span {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6c6593;
+  font-weight: 700;
+}
+.protocol-arm-heading h4 {
+  font-size: 16px;
+  color: #363950;
+  margin: 5px 0 0;
+}
+.protocol-arm dl {
+  margin: 0;
+  padding: 5px 18px;
+}
+.protocol-arm dl > div {
+  display: grid;
+  grid-template-columns: 155px 1fr;
+  gap: 18px;
+  padding: 11px 0;
+  border-bottom: 1px solid #eeeff4;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.protocol-arm dl > div:last-child {
+  border: 0;
+}
+.protocol-arm dt {
+  color: #686d82;
+  font-weight: 500;
+}
+.protocol-arm dd {
+  margin: 0;
+  color: #333c54;
+  overflow-wrap: anywhere;
+}
+.protocol-arm .unextracted {
+  color: #806a49;
+}
+.protocol-arm-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 12px 18px;
+  background: #fafafe;
+  border-top: 1px solid #eeeef4;
+  font-size: 11px;
+  color: #74778d;
+}
+.protocol-arm-sources a {
+  color: #55538d;
+}
+.protocol-arm-sources svg,
+.protocol-references svg {
+  display: inline;
+  vertical-align: middle;
+}
+.protocol-gaps {
+  border-left: 3px solid #bfa57d;
+  background: #faf7f1;
+  padding: 13px 17px;
+  margin: 20px 0;
+  color: #756043;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.protocol-gaps ul {
+  margin: 4px 0 0;
+  padding-left: 16px;
+}
+.protocol-references {
+  margin-top: 18px;
+  font-size: 12px;
+}
+.protocol-references summary {
+  cursor: pointer;
+  color: #55538d;
+  font-weight: 600;
+}
+.protocol-references ul {
+  padding-left: 18px;
+}
+.protocol-references li {
+  padding: 8px 0;
+}
+.protocol-references li span {
+  display: block;
+  color: #74778d;
+  margin-top: 4px;
+}
+.protocol-pending {
+  background: #f6f5fa;
+  border: 1px solid #e3e1ee;
+  border-radius: 10px;
+  padding: 18px;
+}
+.source-abstract p {
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.85;
+}
+.comparison-table td {
+  white-space: pre-line;
+}
+@media (max-width: 760px) {
+  .watch-disease-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .disease-group-heading h3 {
+    font-size: 17px;
+  }
+  .library-tabs-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .display-controls {
+    gap: 10px;
+  }
+}
+@media (max-width: 520px) {
+  .protocol-arm dl > div {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+  .protocol-arm dt {
+    font-size: 11px;
+  }
+  .protocol-arm dl,
+  .protocol-arm-heading {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .protocol-pending {
+    padding: 12px;
+  }
+}

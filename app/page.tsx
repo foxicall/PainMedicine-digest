@@ -25,7 +25,14 @@ import {
 } from 'lucide-react';
 import { seedTrials } from '@/data/seed-trials';
 import type { ClinicalTrialSummary, TrialFilters } from '@/types/trial';
-import { activeFilterCount, defaultFilters, filterTrials, mergeTrials } from '@/lib/trials';
+import {
+  activeFilterCount,
+  defaultFilters,
+  filterTrials,
+  groupTrialsByDisease,
+  mergeTrials,
+} from '@/lib/trials';
+import { diseaseLabel } from '@/lib/diseases';
 import { downloadFile, toBibTeX, toCSV } from '@/lib/export';
 import { useLibrary } from '@/lib/store';
 import { TrialCard } from '@/components/TrialCard';
@@ -42,6 +49,7 @@ export default function Page() {
   const [view, setView] = useState<'all' | 'saved'>('all');
   const [layout, setLayout] = useState<'grid' | 'list'>('grid');
   const [sort, setSort] = useState('newest');
+  const [grouped, setGrouped] = useState(true);
   const [selectedTrial, setSelectedTrial] = useState<ClinicalTrialSummary | null>(null);
   const [dialog, setDialog] = useState<
     'pubmed' | 'ask' | 'methodology' | 'compare' | 'filters' | null
@@ -77,6 +85,11 @@ export default function Page() {
     return list;
   }, [allTrials, savedTrials, filters, view, sort]);
   const comparisons = allTrials.filter((t) => compareIds.includes(t.id));
+  const diseaseGroups = useMemo(
+    () =>
+      grouped ? groupTrialsByDisease(visible, filters.disease) : [['All trials', visible] as const],
+    [visible, filters.disease, grouped],
+  );
   const totalParticipants = seedTrials.reduce((sum, t) => sum + (t.sampleSize ?? 0), 0);
   const filterCount = activeFilterCount(filters);
 
@@ -391,6 +404,14 @@ export default function Page() {
                     </button>
                   </div>
                   <div className="display-controls">
+                    <label className="group-disease-toggle">
+                      <input
+                        type="checkbox"
+                        checked={grouped}
+                        onChange={(e) => setGrouped(e.target.checked)}
+                      />
+                      Group by disease
+                    </label>
                     <label htmlFor="sort-trials">Sort by:</label>
                     <select id="sort-trials" value={sort} onChange={(e) => setSort(e.target.value)}>
                       <option value="newest">Newest first</option>
@@ -444,6 +465,12 @@ export default function Page() {
                 </div>
                 {(filterCount > 0 || filters.query) && (
                   <div className="active-filters">
+                    {filters.disease !== 'all' && (
+                      <button onClick={() => setFilters({ ...filters, disease: 'all' })}>
+                        {diseaseLabel(filters.disease)}
+                        <X size={12} />
+                      </button>
+                    )}
                     {filters.specialties.map((s) => (
                       <button
                         key={s}
@@ -499,14 +526,39 @@ export default function Page() {
                   </div>
                 )}
                 {visible.length ? (
-                  <div className={`trial-grid ${layout === 'list' ? 'trial-list' : ''}`}>
-                    {visible.map((trial) => (
-                      <TrialCard
-                        trial={trial}
-                        key={trial.id}
-                        onOpen={setSelectedTrial}
-                        notify={notify}
-                      />
+                  <div className="disease-library-groups">
+                    {grouped && (
+                      <p className="grouping-note">
+                        Grouped by study population. Studies with several conditions appear once;
+                        all conditions remain searchable in the disease filter. Sorting applies
+                        within each group.
+                      </p>
+                    )}
+                    {diseaseGroups.map(([name, studies]) => (
+                      <section
+                        key={name}
+                        className="disease-library-group"
+                        aria-label={grouped ? name : 'All visible trials'}
+                      >
+                        {grouped && (
+                          <div className="disease-group-heading">
+                            <h3>{name}</h3>
+                            <span>
+                              {studies.length} {studies.length === 1 ? 'study' : 'studies'}
+                            </span>
+                          </div>
+                        )}
+                        <div className={`trial-grid ${layout === 'list' ? 'trial-list' : ''}`}>
+                          {studies.map((trial) => (
+                            <TrialCard
+                              trial={trial}
+                              key={trial.id}
+                              onOpen={setSelectedTrial}
+                              notify={notify}
+                            />
+                          ))}
+                        </div>
+                      </section>
                     ))}
                   </div>
                 ) : (

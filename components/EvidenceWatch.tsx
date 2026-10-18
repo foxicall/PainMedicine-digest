@@ -10,6 +10,9 @@ import {
   Search,
 } from 'lucide-react';
 import { createEvidenceSearch } from '@/lib/evidence-search';
+import { classifyDisease, diseaseCounts, diseaseLabel, type DiseaseId } from '@/lib/diseases';
+import { treatmentProtocols } from '@/data/treatment-protocols';
+import { DiseaseSelect } from './DiseaseSelect';
 import {
   eligibleMetric,
   evidenceToTrial,
@@ -44,6 +47,7 @@ export function EvidenceWatch({
   const [settledSearch, setSettledSearch] = useState('');
   const [country, setCountry] = useState('All countries');
   const [rctOnly, setRctOnly] = useState(false);
+  const [disease, setDisease] = useState<DiseaseId | 'all'>('all');
   const [page, setPage] = useState(0);
   const today = new Date().toISOString().slice(0, 10);
   const start =
@@ -73,7 +77,15 @@ export function EvidenceWatch({
       rows = rows.filter((r) => r.publicationTypes.includes('Randomized Controlled Trial'));
     return rows;
   }, [feed.records, start, today, tab, rctOnly, data.metrics]);
-  const findRecords = useMemo(() => createEvidenceSearch(eligibleRecords), [eligibleRecords]);
+  const counts = useMemo(() => diseaseCounts(eligibleRecords), [eligibleRecords]);
+  const diseaseRecords = useMemo(
+    () =>
+      disease === 'all'
+        ? eligibleRecords
+        : eligibleRecords.filter((r) => classifyDisease(r).ids.includes(disease)),
+    [eligibleRecords, disease],
+  );
+  const findRecords = useMemo(() => createEvidenceSearch(diseaseRecords), [diseaseRecords]);
   const records = useMemo(() => findRecords(settledSearch), [findRecords, settledSearch]);
   const pages = Math.max(1, Math.ceil(records.length / PAGE_SIZE));
   const currentPage = Math.min(page, pages - 1);
@@ -211,6 +223,23 @@ export function EvidenceWatch({
           </select>
         )}
       </div>
+      <div className="watch-disease-row">
+        <DiseaseSelect
+          value={disease}
+          counts={counts}
+          label="Browse evidence by disease"
+          onChange={(value) => {
+            setDisease(value);
+            setPage(0);
+          }}
+        />
+        <p>
+          Index labels use title keywords unless the population has been reviewed. Unclassified
+          records remain available.
+          {tab === 'guidelines' &&
+            ' Disease selection applies to PubMed records below, not the official-source directory.'}
+        </p>
+      </div>
       {tab === 'guidelines' && (
         <>
           <div className="watch-section-heading">
@@ -339,6 +368,8 @@ export function EvidenceWatch({
       <div className="evidence-records">
         {records.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE).map((record) => {
           const metric = data.metrics.find((m) => m.id === record.metricId);
+          const classification = classifyDisease(record);
+          const protocol = treatmentProtocols[record.pmid];
           return (
             <article className="evidence-record" key={record.pmid}>
               <div className="record-journal">
@@ -362,13 +393,18 @@ export function EvidenceWatch({
                 {record.authors.length > 3 ? ', et al.' : ''}
               </p>
               <div className="record-tags">
+                {classification.ids.map((id) => (
+                  <span className="record-disease" key={id} title={classification.basis}>
+                    {diseaseLabel(id)}
+                  </span>
+                ))}
                 <span>
                   {record.publicationTypes.includes('Randomized Controlled Trial')
                     ? 'Randomized controlled trial'
                     : record.publicationTypes.filter((type) => type !== 'Journal Article')[0] ||
                       'Journal article'}
                 </span>
-                <span>Awaiting appraisal</span>
+                <span>{protocol ? 'Regimen sources checked' : 'Awaiting appraisal'}</span>
                 {metric && (
                   <a href={metric.sourceUrl} target="_blank" rel="noreferrer">
                     JIF {metric.value} · {metric.year}
@@ -379,8 +415,14 @@ export function EvidenceWatch({
                 <div className="record-takeaway">
                   <strong>Clinical takeaway</strong>
                   <p>
-                    Awaiting clinical appraisal. Population, treatment regimen, effect estimates,
-                    safety and risk of bias have not been extracted automatically.
+                    {protocol
+                      ? 'A curated digest is available with population, outcomes, safety and appraisal context.'
+                      : 'Awaiting clinical appraisal. Population, treatment regimen, effect estimates, safety and risk of bias have not been extracted automatically.'}
+                  </p>
+                  <strong>Intervention & dosing</strong>
+                  <p>
+                    {protocol?.summary ??
+                      'Dose, injectate volume and procedure parameters: not extracted. Retrieve the source abstract in the digest.'}
                   </p>
                 </div>
               )}

@@ -1,3 +1,6 @@
+import type { DiseaseId } from '@/lib/diseases';
+import type { TreatmentProtocol } from './protocol';
+
 export const SPECIALTIES = [
   'Neuropathic Pain',
   'Headache & Facial Pain',
@@ -60,10 +63,13 @@ export interface ClinicalTrialSummary {
     sourceUrl: string;
   };
   abstract: string | null;
+  // Optional to preserve older local bookmarks and unappraised PubMed imports.
+  treatmentProtocol?: TreatmentProtocol;
 }
 
 export interface TrialFilters {
   query: string;
+  disease: DiseaseId | 'all';
   specialties: Specialty[];
   years: [number, number];
   minSample: number;

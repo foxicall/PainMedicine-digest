@@ -2,6 +2,8 @@ import { ExternalLink, X } from 'lucide-react';
 import type { ClinicalTrialSummary } from '@/types/trial';
 import { Modal } from './ui';
 import { useLibrary } from '@/lib/store';
+import { classifyDisease, diseaseLabel } from '@/lib/diseases';
+import { protocolText } from '@/types/protocol';
 
 export function CompareModal({
   open,
@@ -14,6 +16,7 @@ export function CompareModal({
 }) {
   const toggleCompare = useLibrary((s) => s.toggleCompare);
   const rows: [string, (t: ClinicalTrialSummary) => string][] = [
+    ['Disease / condition', (t) => classifyDisease(t).ids.map(diseaseLabel).join('; ')],
     ['Clinical takeaway', (t) => t.bottomLine],
     ['Population', (t) => t.pico.population],
     [
@@ -22,6 +25,15 @@ export function CompareModal({
     ],
     ['Intervention', (t) => t.pico.intervention],
     ['Comparator', (t) => t.pico.comparator],
+    ['Procedure & dosage by arm', (t) => protocolText(t.treatmentProtocol)],
+    [
+      'Protocol gaps',
+      (t) =>
+        t.treatmentProtocol?.gaps.join(' ') ||
+        (t.treatmentProtocol
+          ? 'See source methods for the complete protocol.'
+          : 'Awaiting extraction'),
+    ],
     ['Outcome', (t) => `${t.outcome.label} (${t.outcome.kind})`],
     ['Result', (t) => `${t.outcome.value} · ${t.outcome.context}`],
     ['Timepoint', (t) => t.outcome.timepoint],
@@ -94,6 +106,22 @@ export function CompareModal({
                   ))}
                 </tr>
               ))}
+              <tr>
+                <th scope="row">Regimen sources</th>
+                {trials.map((t) => (
+                  <td key={t.id}>
+                    {t.treatmentProtocol
+                      ? t.treatmentProtocol.sources.map((source) => (
+                          <p key={source.id}>
+                            <a href={source.url} target="_blank" rel="noreferrer">
+                              {source.title} <ExternalLink size={12} />
+                            </a>
+                          </p>
+                        ))
+                      : 'Not extracted'}
+                  </td>
+                ))}
+              </tr>
             </tbody>
           </table>
         </div>
