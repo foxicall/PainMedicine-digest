@@ -143,7 +143,7 @@ def build(args):
         'scope': {'from': corpus['window']['from'], 'to': corpus['window']['to'], 'query': corpus['query']},
         'execution': {
             'mode': 'source-assisted', 'externalApiStatus': 'not-run',
-            'note': 'Source-assisted screening and full-text draft extraction. External Luna/Sol API calls have not run, so no API token usage or paid extraction cost is claimed. Source excerpts are traceable; this is not formal clinical appraisal.',
+            'note': 'These published drafts use source-assisted screening and full-text extraction. No successful external model extraction or API token usage is included in this snapshot. Source excerpts are traceable; this is not formal clinical appraisal.',
             'models': {'screening': None, 'fullText': None}, 'requests': 0, 'inputTokens': 0, 'outputTokens': 0, 'costUsd': 0,
         },
         'counts': {'candidates': len(records), 'abstracts': sum(item['abstractAvailable'] for item in records), 'fullTexts': len(fulls), 'detailed': len(trials)},
@@ -157,6 +157,13 @@ def build(args):
             'plannedMaxCostUsd': plan['conservativeReservedMaximumCostUSD'],
             'budgetCapUsd': plan['budgetCapUSD'],
         })
+        if 'targetFulltextCount' in plan:
+            result['execution']['plannedWorkflow'] = {
+                'candidateCount': plan['candidateCount'], 'abstractCount': plan['abstractCount'],
+                'targetFulltextCount': plan['targetFulltextCount'],
+                'fulltextRatio': plan['fulltextSelection']['ratio'],
+                'abstractModel': plan['models']['abstract'], 'fulltextModel': plan['models']['fulltext'],
+            }
     Path(args.output).write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n')
     if args.csv:
         with Path(args.csv).open('w', newline='') as handle:

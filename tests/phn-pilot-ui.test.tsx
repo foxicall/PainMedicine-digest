@@ -64,6 +64,14 @@ vi.mock('@/data/phn-pilot.json', async () => {
         costUsd: 0,
         plannedMaxCostUsd: 2.68,
         budgetCapUsd: 10,
+        plannedWorkflow: {
+          candidateCount: 27,
+          abstractCount: 27,
+          targetFulltextCount: 3,
+          fulltextRatio: 0.1,
+          abstractModel: 'gpt-6-luna',
+          fulltextModel: 'gpt-6.1-sol',
+        },
       },
       counts: { candidates: 27, abstracts: 27, fullTexts: 2, detailed: 2 },
       records: [
@@ -140,6 +148,12 @@ describe('PHN extraction pilot workflow', () => {
     expect(screen.getByText(/source-assisted prototype/)).toBeTruthy();
     expect(screen.getByText('US$2.68 · not incurred cost')).toBeTruthy();
     expect(screen.getByText('US$10.00')).toBeTruthy();
+    expect(
+      screen.getByText(/27 abstracts with gpt-6-luna; up to 3 selected full texts/),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/Abstract screening: Not run; full-text extraction: Not run/),
+    ).toBeTruthy();
     const sourceIndex = within(screen.getByRole('region', { name: 'PHN pilot source index' }));
     expect(sourceIndex.getAllByRole('article')).toHaveLength(24);
     await user.click(sourceIndex.getByRole('button', { name: 'Next' }));

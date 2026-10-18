@@ -1,0 +1,57 @@
+{
+  "checkedAt": "2026-10-18T08:21:28.220647+00:00",
+  "status": "authentication-failed",
+  "purpose": "User-requested paid API usability test; published clinical drafts are unchanged",
+  "modelListCheck": {
+    "httpStatus": 200,
+    "requestedModelsListed": ["gpt-6-luna", "gpt-6.1-sol"],
+    "recheckedThisRetest": false
+  },
+  "generationChecks": [
+    {
+      "model": "gpt-6-luna",
+      "mode": "abstract-extraction",
+      "pmid": "30913164",
+      "attempts": 3,
+      "httpStatus": 401,
+      "result": "No model output or usage reported"
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "mode": "minimal-connectivity-check",
+      "attempts": 2,
+      "httpStatus": 401,
+      "errorCode": "invalid_api_key",
+      "result": "No model output or usage reported"
+    }
+  ],
+  "generationRequests": 5,
+  "successfulGenerations": 0,
+  "reportedTokenUsage": null,
+  "costFromReportedUsageUSD": 0.0,
+  "note": "Requests reached the generation endpoint but authentication failed. Full-text extraction and paid-model usability remain unverified. No response bodies, headers or credentials are included.",
+  "initialCheckedAt": "2026-10-18T07:55:13.755568+00:00",
+  "latestRetest": {
+    "checkedAt": "2026-10-18T08:21:28.220647+00:00",
+    "environmentConfigurationRevision": "10",
+    "environmentObservedRevision": "10",
+    "credentialBindingState": "ready",
+    "generationRequests": 2,
+    "results": [
+      {
+        "model": "gpt-6-luna",
+        "mode": "abstract-extraction",
+        "httpStatus": 401,
+        "reportedUsage": false
+      },
+      {
+        "model": "gpt-6.1-sol",
+        "mode": "minimal-connectivity-check",
+        "httpStatus": 401,
+        "errorCode": "invalid_api_key",
+        "reportedUsage": false
+      }
+    ],
+    "note": "Retested after the user updated the environment credential. Configuration readiness does not establish API authentication; generation remains blocked."
+  }
+}

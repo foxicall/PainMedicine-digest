@@ -17,15 +17,13 @@ from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
 
 from update_evidence import date_interval
+from extract_phn_pilot import fulltext_exclusion, fulltext_target, ranked_records
 
 BASE = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/'
 QUERY = ('("Neuralgia, Postherpetic"[Mesh] OR postherpetic[tiab] OR "post-herpetic"[tiab]) '
          'AND ("clinical trial"[pt] OR "randomized controlled trial"[pt] '
          'OR "guideline"[pt] OR "practice guideline"[pt]) '
          'AND ("2016-10-18"[dp] : "2026-10-18"[dp])')
-PRIORITY = ['30913164', '35529453', '36267666', '36451915', '41527251',
-            '39320907', '27753650', '31166976', '40048191', '40418104',
-            '33675631', '28266963', '29757758', '35685657', '35901476']
 
 
 def text(element):
@@ -129,14 +127,17 @@ def fulltext_record(xml, row, url):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--candidates', default='/tmp/pain-phn-candidates.json')
+    parser.add_argument('--candidates', default=str(Path(__file__).resolve().parents[1] / 'data/phn-pilot.json'))
     parser.add_argument('--output', default='/tmp/pain-phn-source-records.json')
     parser.add_argument('--cache', default='/tmp/pain-phn-source-cache')
     parser.add_argument('--fulltext-directory', default='/tmp/pain-phn-fulltexts')
-    parser.add_argument('--fulltext-target', type=int, default=10)
+    parser.add_argument('--fulltext-target', type=int, help='Override ceil(10%% of candidates); collect more for screening replacements')
     args = parser.parse_args()
     client = Client(Path(args.cache))
-    existing = {str(row['pmid']): row for row in json.loads(Path(args.candidates).read_text())}
+    if args.fulltext_target is not None and args.fulltext_target < 0:
+        parser.error('--fulltext-target must be nonnegative')
+    candidates = json.loads(Path(args.candidates).read_text())
+    existing = {str(row['pmid']): row for row in (candidates if isinstance(candidates, list) else candidates['records'])}
     search = json.loads(client.eutils('esearch.fcgi', 'phn-search.json', db='pubmed', term=QUERY, retmode='json', retmax=9999))['esearchresult']
     if len(search['idlist']) != int(search['count']):
         raise ValueError('Search response truncated')
@@ -159,10 +160,11 @@ def main():
     rows.sort(key=lambda row: (row.get('publicationDate', row['sourcePublicationDate']), int(row['pmid'])), reverse=True)
     fulltext_dir = Path(args.fulltext_directory)
     fulltext_dir.mkdir(parents=True, exist_ok=True)
-    fulltext_rows = sorted((row for row in rows if row.get('pmcid')), key=lambda row: PRIORITY.index(row['pmid']) if row['pmid'] in PRIORITY else len(PRIORITY))
+    target = fulltext_target(len(rows), args.fulltext_target)
+    fulltext_rows = ranked_records([row for row in rows if row.get('pmcid') and not fulltext_exclusion(row)])
     fulltext_count = 0
     for row in fulltext_rows:
-        if fulltext_count >= args.fulltext_target:
+        if fulltext_count >= target:
             break
         url = f'https://www.ebi.ac.uk/europepmc/webservices/rest/{row["pmcid"]}/fullTextXML'
         try:
@@ -185,6 +187,7 @@ def main():
               'searchCount': int(search['count']), 'initialCandidates': len(existing),
               'supplementalCandidates': len(set(search['idlist']) - set(existing)),
               'retrievedAt': datetime.now(timezone.utc).isoformat(), 'fulltextCount': fulltext_count,
+              'fulltextTarget': target, 'fulltextShortfall': max(0, target - fulltext_count),
               'records': rows}
     Path(args.output).write_text(json.dumps(output, ensure_ascii=False, indent=2) + '\n')
     print(json.dumps({key: value for key, value in output.items() if key != 'records'}), flush=True)

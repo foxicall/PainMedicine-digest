@@ -34,6 +34,7 @@ PRICING_SOURCE = 'https://developers.openai.com/api/docs/pricing'
 PRICING_CHECKED_ON = '2026-10-18'
 FULLTEXT_PRIORITY = ['30913164', '39320907', '40418104', '28266963', '31166976',
                      '35529453', '36267666', '36451915', '41527251', '35685657']
+DEFAULT_FULLTEXT_RATIO = 0.10
 UPGRADE_CATEGORIES = {'established-phn-treatment', 'phn-prevention', 'mixed-population', 'guideline'}
 SCREENING_CATEGORIES = [
     'established-phn-treatment', 'phn-prevention', 'acute-herpes-zoster',
@@ -417,44 +418,103 @@ def read_records(path):
     return list(by_id.values())
 
 
-def select_fulltexts(records, directory, limit, explicit=None):
+def fulltext_target(candidate_count, limit=None):
+    """Ten percent of unique candidates, rounded up; an explicit count overrides it."""
+    if limit is not None and limit < 0:
+        raise ValueError('Full-text limit must be nonnegative')
+    return min(candidate_count, limit) if limit is not None else (candidate_count + 9) // 10
+
+
+def fulltext_exclusion(record):
+    if not record.get('abstract', '').strip():
+        return 'No abstract available for first-stage screening'
+    if record.get('withinPublicationWindow') is False:
+        return 'Outside the publication window'
+    if record.get('integrityFlags'):
+        return 'Publication integrity flag requires review'
+    return None
+
+
+def ranked_records(records, explicit=None):
+    """Curated priorities, then guidelines, randomized trials and other reports.
+
+    Newer publication dates and numeric PMIDs break ties. Explicit PMIDs are
+    preferences, not an allowlist: other sources remain available as replacements.
+    This is a reading priority, never an evidence-quality or risk-of-bias rating.
+    """
+    priority = list(dict.fromkeys((explicit or []) + FULLTEXT_PRIORITY))
+
+    def rank(row):
+        pmid = str(row['pmid'])
+        types = {value.lower() for value in row.get('publicationTypes', [])}
+        study_rank = (0 if types & {'guideline', 'practice guideline'} else
+                      1 if 'randomized controlled trial' in types else 2)
+        date = (row.get('sourceDateInterval') or {}).get('from') or row.get('sourcePublicationDate', '')
+        date_number = int(re.sub(r'[^0-9]', '', date)[:8].ljust(8, '0') or 0)
+        return (priority.index(pmid) if pmid in priority else len(priority),
+                study_rank, -date_number, -int(pmid))
+
+    return sorted(records, key=rank)
+
+
+def select_fulltexts(records, directory, limit=None, explicit=None):
+    if limit == 0:
+        return []
     by_id = {str(row['pmid']): row for row in records}
     available = {path.stem: path for path in Path(directory).glob('*.json') if path.stem in by_id}
-    order = explicit if explicit is not None else FULLTEXT_PRIORITY + sorted(available)
+    order = [str(row['pmid']) for row in ranked_records(records, explicit)
+             if not fulltext_exclusion(row)]
     selected = []
     for pmid in order:
         if pmid not in available or pmid in selected:
             continue
         selected.append(pmid)
-        if len(selected) == limit:
+        if limit is not None and len(selected) == limit:
             break
-    if limit == 0:
-        return []
     return [(by_id[pmid], json.loads(available[pmid].read_text())) for pmid in selected]
 
 
-def build_plan(records, directory, fulltext_limit=10, fulltext_pmids=None,
+def build_plan(records, directory, fulltext_pmids=None,
                abstract_model='gpt-6-luna', fulltext_model='gpt-6.1-sol',
                abstract_output=6000, fulltext_output=12000):
-    abstracts = [make_task(row, abstract_model, max_output_tokens=abstract_output) for row in records]
+    abstracts = [make_task(row, abstract_model, max_output_tokens=abstract_output) for row in records
+                 if row.get('abstract', '').strip()]
     fulltexts = [make_task(row, fulltext_model, fulltext, fulltext_output)
-                 for row, fulltext in select_fulltexts(records, directory, fulltext_limit, fulltext_pmids)]
+                 for row, fulltext in select_fulltexts(records, directory, explicit=fulltext_pmids)]
     return abstracts, fulltexts
 
 
-def new_report(abstracts, fulltexts, budget):
+def new_report(abstracts, fulltexts, budget, fulltext_limit=None, candidate_count=None):
+    candidate_count = len(abstracts) if candidate_count is None else candidate_count
+    target = fulltext_target(candidate_count, fulltext_limit)
+    maximum = min(target, len(fulltexts))
     tasks = abstracts + fulltexts
+    # Any reserve candidate may replace a screening exclusion. Budget for the
+    # most expensive possible subset, not just the first titles in the queue.
+    def maximum_cost(key):
+        return sum(task[key] for task in abstracts) + sum(sorted(
+            (task[key] for task in fulltexts), reverse=True)[:maximum])
+
     return {'schemaVersion': SCHEMA_VERSION, 'promptVersion': PROMPT_VERSION,
             'createdAt': utcnow(), 'mode': 'dry-run',
             'pricing': {'billingMode': 'standard-synchronous', 'usdPerMillionTokens': PRICES,
                         'source': PRICING_SOURCE, 'checkedOn': PRICING_CHECKED_ON,
                         'cachedInputDiscountApplied': False,
                         'note': 'Reasoning tokens are included in billed output tokens; estimates are not actual charges.'},
-            'budgetCapUSD': budget, 'abstractCount': len(abstracts),
-            'maximumFulltextCount': len(fulltexts),
-            'plannedFulltextPmids': [task['pmid'] for task in fulltexts],
-            'estimatedMaximumCostUSD': sum(t['estimatedMaximumCostUSD'] for t in tasks),
-            'conservativeReservedMaximumCostUSD': sum(t['reservedMaximumCostUSD'] for t in tasks),
+            'budgetCapUSD': budget, 'candidateCount': candidate_count, 'abstractCount': len(abstracts),
+            'fulltextSelection': {'mode': 'ratio' if fulltext_limit is None else 'count-override',
+                                 'ratio': DEFAULT_FULLTEXT_RATIO if fulltext_limit is None else None,
+                                 'denominator': 'unique candidate records',
+                                 'rounding': 'ceiling' if fulltext_limit is None else 'not-applicable',
+                                 'priority': 'Preferred PMIDs, curated priorities, guidelines, RCTs, other reports; newest first within ties. Not an evidence-quality rating.'},
+            'targetFulltextCount': target, 'availableFulltextCount': len(fulltexts),
+            'maximumFulltextCount': maximum,
+            'fulltextShortfallBeforeScreening': target - maximum,
+            'plannedFulltextPmids': [task['pmid'] for task in fulltexts[:maximum]],
+            'reserveFulltextPmids': [task['pmid'] for task in fulltexts[maximum:]],
+            'selectedFulltextPmids': [],
+            'estimatedMaximumCostUSD': maximum_cost('estimatedMaximumCostUSD'),
+            'conservativeReservedMaximumCostUSD': maximum_cost('reservedMaximumCostUSD'),
             'estimateMethod': 'Input UTF-8 bytes / 3.5; maximum output tokens. Reservation uses input bytes + 1024.',
             'estimatedOnly': True, 'apiCallsThisInvocation': 0,
             'validationScope': 'Schema and verbatim source quotes only; not a clinical correctness or risk-of-bias review.',
@@ -475,6 +535,9 @@ def update_usage(report):
     report['apiCallsThisInvocation'] = sum(len(e.get('attempts', [])) for e in new)
     report['validatedCount'] = sum(e['status'] == 'validated' for e in entries)
     report['rejectedCount'] = sum(e['status'] == 'rejected' for e in entries)
+    fulltexts = [e for e in entries if e['mode'] == 'fulltext']
+    report['validatedFulltextCount'] = sum(e['status'] == 'validated' for e in fulltexts)
+    report['fulltextShortfall'] = report['targetFulltextCount'] - report['validatedFulltextCount']
 
 
 def execute_plan(report, abstracts, fulltexts, cache_dir, api_key, retries=1,
@@ -493,17 +556,24 @@ def execute_plan(report, abstracts, fulltexts, cache_dir, api_key, retries=1,
     abstract_results = {}
     for task in tasks:
         if task['mode'] == 'fulltext':
+            if len(report['selectedFulltextPmids']) >= report['targetFulltextCount']:
+                break
             abstract = abstract_results.get(task['pmid'])
             if not abstract or abstract['status'] != 'validated':
                 report['results'].append({**task_report(task), 'status': 'not-upgraded',
                                           'reason': 'No source-validated abstract screening result'})
+                if progress:
+                    progress(report)
                 continue
             screening = abstract['result']['screening']
             if (screening['category'] not in UPGRADE_CATEGORIES
                     or screening['category'] == 'mixed-population' and screening['populationSeparable'] is not True):
                 report['results'].append({**task_report(task), 'status': 'not-upgraded',
                                           'reason': 'Not eligible PHN treatment/prevention, separable mixed PHN, or guideline context'})
+                if progress:
+                    progress(report)
                 continue
+            report['selectedFulltextPmids'].append(task['pmid'])
         entry, spent = execute_task(task, api_key, cache_dir, report['budgetCapUSD'], spent, retries, requester)
         report['results'].append(entry)
         if task['mode'] == 'abstract':
@@ -518,10 +588,28 @@ def execute_plan(report, abstracts, fulltexts, cache_dir, api_key, retries=1,
             report['status'] = 'stopped'
             report['stopReason'] = entry.get('error', entry['status'])
             break
-    else:
+    if report['status'] == 'running':
         report['status'] = 'completed'
     update_usage(report)
     return report
+
+
+def public_plan(report):
+    """Publish estimates and routing only, never source text, responses or secrets."""
+    keys = ('mode', 'status', 'candidateCount', 'abstractCount', 'targetFulltextCount',
+            'availableFulltextCount', 'maximumFulltextCount', 'fulltextSelection',
+            'fulltextShortfallBeforeScreening', 'estimatedMaximumCostUSD',
+            'conservativeReservedMaximumCostUSD', 'budgetCapUSD', 'pricing', 'estimateMethod',
+            'actualCostThisInvocationUSD', 'apiCallsThisInvocation', 'sourceInputHash')
+    result = {key: report[key] for key in keys if key in report}
+    result['models'] = {mode: next((t['model'] for t in report['tasks'] if t['mode'] == mode), None)
+                        for mode in ('abstract', 'fulltext')}
+    result['createdAt'] = report['createdAt']
+    result['missingAbstractPmids'] = report.get('missingAbstractPmids', [])
+    result['note'] = ('Preflight estimate only; no API requests were made by this dry run. '
+                      'Full-text eligibility is decided after abstract screening; availability '
+                      'and the spending cap can reduce coverage. Raw sources are not included.')
+    return result
 
 
 def main(argv=None):
@@ -530,10 +618,12 @@ def main(argv=None):
     parser.add_argument('--fulltext-directory', default='/tmp/pain-phn-fulltexts')
     parser.add_argument('--cache', default='/tmp/pain-phn-extraction-cache')
     parser.add_argument('--output', default='/tmp/pain-phn-extraction-usage.json')
+    parser.add_argument('--public-plan', help='Optional sanitized JSON plan output (dry runs only)')
     parser.add_argument('--execute', action='store_true', help='Explicitly enable paid OpenAI API requests')
+    parser.add_argument('--api-key-env', default='OPENAI_API_KEY', help='Server-side credential environment variable name, never its value')
     parser.add_argument('--budget-usd', type=float, default=10.0)
-    parser.add_argument('--fulltext-limit', type=int, default=10)
-    parser.add_argument('--fulltext-pmids', help='Comma-separated preferred PMIDs; only locally available full texts')
+    parser.add_argument('--fulltext-limit', type=int, help='Override ceil(10%% of candidates); 0 disables full-text calls')
+    parser.add_argument('--fulltext-pmids', help='Comma-separated preferred PMIDs; other available texts can replace screening exclusions')
     parser.add_argument('--abstract-model', choices=list(PRICES), default='gpt-6-luna')
     parser.add_argument('--fulltext-model', choices=list(PRICES), default='gpt-6.1-sol')
     parser.add_argument('--abstract-output-tokens', type=int, default=6000)
@@ -542,26 +632,35 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if not math.isfinite(args.budget_usd) or not 0 < args.budget_usd <= 10:
         parser.error('--budget-usd must be > 0 and <= 10 for this pilot')
-    if args.fulltext_limit < 0 or args.fulltext_limit > 20:
-        parser.error('--fulltext-limit must be between 0 and 20')
+    if args.fulltext_limit is not None and args.fulltext_limit < 0:
+        parser.error('--fulltext-limit must be nonnegative')
+    if args.execute and args.public_plan:
+        parser.error('--public-plan is for dry runs only; execution reports stay private')
     if not 256 <= args.abstract_output_tokens <= 12000 or not 256 <= args.fulltext_output_tokens <= 20000:
         parser.error('Output token limits are outside the pilot bounds')
     records = read_records(args.input)
-    explicit = args.fulltext_pmids.split(',') if args.fulltext_pmids else None
-    abstracts, fulltexts = build_plan(records, args.fulltext_directory, args.fulltext_limit, explicit,
+    explicit = [pmid.strip() for pmid in args.fulltext_pmids.split(',')] if args.fulltext_pmids else None
+    if explicit and any(not pmid.isdigit() for pmid in explicit):
+        parser.error('--fulltext-pmids must contain numeric PMIDs')
+    abstracts, fulltexts = build_plan(records, args.fulltext_directory, explicit,
                                     args.abstract_model, args.fulltext_model,
                                     args.abstract_output_tokens, args.fulltext_output_tokens)
-    report = new_report(abstracts, fulltexts, args.budget_usd)
+    report = new_report(abstracts, fulltexts, args.budget_usd, args.fulltext_limit, len(records))
     report['sourceInputHash'] = digest(records)
+    report['missingAbstractPmids'] = [str(row['pmid']) for row in records if not row.get('abstract', '').strip()]
+    report['fulltextExclusions'] = [{'pmid': str(row['pmid']), 'reason': fulltext_exclusion(row)}
+                                    for row in records if fulltext_exclusion(row)]
     if args.execute:
-        api_key = os.environ.get('OPENAI_API_KEY')
+        api_key = os.environ.get(args.api_key_env)
         if not api_key:
-            parser.error('OPENAI_API_KEY is required for --execute; no request was sent')
+            parser.error('The configured API credential environment variable is empty; no request was sent')
         execute_plan(report, abstracts, fulltexts, args.cache, api_key, args.retries,
                      progress=lambda value: atomic_json(args.output, value))
     atomic_json(args.output, report)
+    if args.public_plan:
+        atomic_json(args.public_plan, public_plan(report))
     print(json.dumps({key: report[key] for key in (
-        'mode', 'status', 'abstractCount', 'maximumFulltextCount', 'estimatedMaximumCostUSD',
+        'mode', 'status', 'abstractCount', 'targetFulltextCount', 'maximumFulltextCount', 'estimatedMaximumCostUSD',
         'conservativeReservedMaximumCostUSD', 'actualCostThisInvocationUSD',
         'uncertainReservedCostThisInvocationUSD', 'cumulativeActualCostUSD',
         'cumulativeUncertainReservedCostUSD', 'apiCallsThisInvocation')}, indent=2))
