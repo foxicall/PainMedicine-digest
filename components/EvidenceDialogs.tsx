@@ -201,7 +201,7 @@ export function AskEvidenceModal({
                   }}
                 >
                   <div>
-                    <Pill tone="teal">{t.acronym}</Pill>
+                    <Pill tone="indigo">{t.acronym}</Pill>
                     <span>
                       {t.year} <ArrowUpRight size={14} />
                     </span>
@@ -284,8 +284,8 @@ export function MethodologyModal({
           <p>
             Blinding and analysis details are descriptive. All records remain “Not formally
             assessed” for risk of bias until a domain-level RoB 2 appraisal of the full report is
-            completed. “High impact” indicates a fixed journal-family selection (PAIN, Lancet, JAMA,
-            NEJM, Cephalalgia, Anesthesiology), not an impact factor or endorsement.
+            completed. “Editorial journal” indicates a fixed journal-family selection (PAIN, Lancet,
+            JAMA, NEJM, Cephalalgia, Anesthesiology), not an impact factor or endorsement.
           </p>
         </section>
         <section>

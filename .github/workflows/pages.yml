@@ -1,6 +1,9 @@
 name: Deploy GitHub Pages
 on:
   workflow_dispatch:
+  workflow_call:
+  push:
+    branches: [main]
 permissions:
   contents: read
   pages: write
@@ -16,12 +19,15 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - run: npm test
+      - run: npm run test:pipeline
       - run: npm run build
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/

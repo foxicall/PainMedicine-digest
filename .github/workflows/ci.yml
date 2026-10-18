@@ -16,6 +16,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - run: npm run test:pipeline
       - run: npm run build
       - name: Build standalone preview
         run: node scripts/build-preview.mjs

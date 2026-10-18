@@ -7,3 +7,5 @@ preview.html
 coverage/
 test-results/
 *.log
+__pycache__/
+*.pyc

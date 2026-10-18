@@ -4,7 +4,7 @@ import type { ClinicalTrialSummary, TrialFilters } from '@/types/trial';
 export const defaultFilters: TrialFilters = {
   query: '',
   specialties: [],
-  years: [2016, 2026],
+  years: [2016, Math.max(2026, new Date().getUTCFullYear())],
   minSample: 0,
   interventions: [],
   highImpactOnly: false,
@@ -59,7 +59,7 @@ export function activeFilterCount(f: TrialFilters) {
     f.interventions.length +
     Number(f.minSample > 0) +
     Number(f.highImpactOnly) +
-    Number(f.years[0] !== 2016 || f.years[1] !== 2026)
+    Number(f.years[0] !== defaultFilters.years[0] || f.years[1] !== defaultFilters.years[1])
   );
 }
 

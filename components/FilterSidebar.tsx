@@ -89,7 +89,7 @@ export function FilterSidebar({
         <Slider.Root
           className="range-slider"
           min={2016}
-          max={2026}
+          max={defaultFilters.years[1]}
           step={1}
           minStepsBetweenThumbs={0}
           value={filters.years}
@@ -103,7 +103,7 @@ export function FilterSidebar({
         </Slider.Root>
         <div className="range-captions">
           <span>2016</span>
-          <span>2026</span>
+          <span>{defaultFilters.years[1]}</span>
         </div>
       </fieldset>
       <fieldset className="filter-section">
@@ -148,7 +148,7 @@ export function FilterSidebar({
             checked={filters.highImpactOnly}
             onChange={(e) => update({ highImpactOnly: e.target.checked })}
           />
-          <span>High-impact journals only</span>
+          <span>Editorial journals only</span>
         </label>
         <p className="filter-hint">
           PAIN, Lancet, JAMA, NEJM,

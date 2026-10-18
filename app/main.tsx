@@ -11,6 +11,7 @@ import '@fontsource/manrope/latin-600.css';
 import '@fontsource/manrope/latin-700.css';
 import '@fontsource/manrope/latin-800.css';
 import './globals.css';
+import './evidence.css';
 
 const client = new QueryClient({
   defaultOptions: { queries: { refetchOnWindowFocus: false, retry: false } },
@@ -45,3 +46,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </React.StrictMode>,
 );
+
+document.getElementById('preview-status')?.remove();
