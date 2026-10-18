@@ -10,6 +10,7 @@ import {
   Search,
 } from 'lucide-react';
 import { createEvidenceSearch } from '@/lib/evidence-search';
+import { unreadFirst } from '@/lib/reading-order';
 import { classifyDisease, diseaseCounts, diseaseLabel, type DiseaseId } from '@/lib/diseases';
 import { treatmentProtocols } from '@/data/treatment-protocols';
 import { DiseaseSelect } from './DiseaseSelect';
@@ -94,8 +95,12 @@ export function EvidenceWatch({
   const candidates = useMemo(() => findRecords(settledSearch), [findRecords, settledSearch]);
   const records = useMemo(
     () =>
-      candidates.filter(
-        (r) => readingStatus === 'all' || readSet.has(r.pmid) === (readingStatus === 'read'),
+      unreadFirst(
+        candidates.filter(
+          (r) => readingStatus === 'all' || readSet.has(r.pmid) === (readingStatus === 'read'),
+        ),
+        readSet,
+        (r) => r.pmid,
       ),
     [candidates, readingStatus, readSet],
   );
@@ -385,7 +390,7 @@ export function EvidenceWatch({
           total={candidates.length}
           read={readCount}
         />
-        <p>Read status and bookmarks are shared with your library.</p>
+        <p>Unread first, then already read. Reading status is shared with your library.</p>
       </div>
       <p className="watch-explanation">
         {tab === 'trials'

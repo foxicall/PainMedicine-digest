@@ -36,6 +36,7 @@ import {
 import { classifyDisease, diseaseLabel } from '@/lib/diseases';
 import { downloadFile, toBibTeX, toCSV } from '@/lib/export';
 import { useLibrary } from '@/lib/store';
+import { unreadFirst } from '@/lib/reading-order';
 import { TrialCard } from '@/components/TrialCard';
 import { FilterSidebar } from '@/components/FilterSidebar';
 import { TrialDetailModal } from '@/components/TrialDetailModal';
@@ -98,21 +99,37 @@ export default function Page() {
   }, [allTrials, savedTrials, filters, view, sort]);
   const visible = useMemo(
     () =>
-      candidates.filter(
-        (t) => readingStatus === 'all' || readSet.has(t.id) === (readingStatus === 'read'),
+      unreadFirst(
+        candidates.filter(
+          (t) => readingStatus === 'all' || readSet.has(t.id) === (readingStatus === 'read'),
+        ),
+        readSet,
+        (t) => t.id,
       ),
     [candidates, readingStatus, readSet],
   );
   const readCount = candidates.filter((t) => readSet.has(t.id)).length;
   const showGroups = view === 'saved' || grouped;
   const comparisons = allTrials.filter((t) => compareIds.includes(t.id));
-  const diseaseGroups = useMemo(
-    () =>
-      showGroups
-        ? groupTrialsByDisease(visible, filters.disease)
-        : [['All trials', visible] as const],
-    [visible, filters.disease, showGroups],
-  );
+  const readingSections = useMemo(() => {
+    const unread = visible.filter((t) => !readSet.has(t.id));
+    const read = visible.filter((t) => readSet.has(t.id));
+    // Split before grouping so a read study in an early disease never precedes
+    // unread studies in another disease. A study still appears only once.
+    const sections =
+      showGroups && unread.length > 0 && read.length > 0
+        ? [
+            { id: 'unread', label: 'Unread', studies: unread },
+            { id: 'read', label: 'Already read', studies: read },
+          ]
+        : [{ id: 'all', label: null, studies: visible }];
+    return sections.map((section) => ({
+      ...section,
+      groups: showGroups
+        ? groupTrialsByDisease(section.studies, filters.disease)
+        : [['All publications', section.studies] as const],
+    }));
+  }, [visible, readSet, showGroups, filters.disease]);
   const totalParticipants = seedTrials.reduce((sum, t) => sum + (t.sampleSize ?? 0), 0);
   const filterCount =
     view === 'saved' ? Number(filters.disease !== 'all') : activeFilterCount(filters);
@@ -405,7 +422,7 @@ export default function Page() {
                     read={readCount}
                   />
                   <p>
-                    Mark studies as read when you finish. Opening a digest keeps its current status.
+                    Unread first, then already read. Your selected sort applies within each status.
                   </p>
                 </div>
                 <div className="search-toolbar">
@@ -603,34 +620,50 @@ export default function Page() {
                     {showGroups && (
                       <p className="grouping-note">
                         Grouped by study population. Studies with several conditions appear once;
-                        all conditions remain searchable in the disease filter. Sorting applies
-                        within each group.
+                        all conditions remain searchable in the disease filter. Unread studies
+                        appear before already-read studies; sorting applies within each disease.
                       </p>
                     )}
-                    {diseaseGroups.map(([name, studies]) => (
+                    {readingSections.map((section) => (
                       <section
-                        key={name}
-                        className="disease-library-group"
-                        aria-label={showGroups ? name : 'All visible trials'}
+                        key={section.id}
+                        className="reading-section"
+                        aria-label={
+                          section.label ? `${section.label} publications` : 'Visible publications'
+                        }
                       >
-                        {showGroups && (
-                          <div className="disease-group-heading">
-                            <h3>{name}</h3>
-                            <span>
-                              {studies.length} {studies.length === 1 ? 'study' : 'studies'}
-                            </span>
+                        {section.label && (
+                          <div className={`reading-section-heading ${section.id}`}>
+                            <h3>{section.label}</h3>
+                            <span>{section.studies.length}</span>
                           </div>
                         )}
-                        <div className={`trial-grid ${layout === 'list' ? 'trial-list' : ''}`}>
-                          {studies.map((trial) => (
-                            <TrialCard
-                              trial={trial}
-                              key={trial.id}
-                              onOpen={setSelectedTrial}
-                              notify={notify}
-                            />
-                          ))}
-                        </div>
+                        {section.groups.map(([name, studies]) => (
+                          <section
+                            key={name}
+                            className="disease-library-group"
+                            aria-label={showGroups ? name : 'All visible trials'}
+                          >
+                            {showGroups && (
+                              <div className="disease-group-heading">
+                                {section.label ? <h4>{name}</h4> : <h3>{name}</h3>}
+                                <span>
+                                  {studies.length} {studies.length === 1 ? 'study' : 'studies'}
+                                </span>
+                              </div>
+                            )}
+                            <div className={`trial-grid ${layout === 'list' ? 'trial-list' : ''}`}>
+                              {studies.map((trial) => (
+                                <TrialCard
+                                  trial={trial}
+                                  key={trial.id}
+                                  onOpen={setSelectedTrial}
+                                  notify={notify}
+                                />
+                              ))}
+                            </div>
+                          </section>
+                        ))}
                       </section>
                     ))}
                   </div>

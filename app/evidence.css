@@ -604,7 +604,8 @@
   margin-bottom: 18px;
   padding-bottom: 12px;
 }
-.disease-group-heading h3 {
+.disease-group-heading h3,
+.disease-group-heading h4 {
   font:
     700 19px/1.4 'Manrope',
     sans-serif;
@@ -760,7 +761,8 @@
     grid-template-columns: 1fr;
     gap: 10px;
   }
-  .disease-group-heading h3 {
+  .disease-group-heading h3,
+  .disease-group-heading h4 {
     font-size: 17px;
   }
   .library-tabs-row {
@@ -790,6 +792,32 @@
 }
 
 /* Reading progress and disease collections share the indigo/slate palette. */
+.reading-section + .reading-section {
+  margin-top: 42px;
+}
+.reading-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 24px 0;
+  padding: 12px 15px;
+  border-radius: 8px;
+  background: #edeef8;
+  color: #4b4d7c;
+}
+.reading-section-heading.read {
+  background: #eef0f5;
+  color: #666d82;
+}
+.reading-section-heading h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+}
+.reading-section-heading > span {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
 .reading-actions {
   display: flex;
   flex-wrap: wrap;

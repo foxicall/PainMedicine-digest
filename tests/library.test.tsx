@@ -34,6 +34,66 @@ const renderPage = () =>
   );
 
 describe('reading workflow', () => {
+  it('moves read studies behind unread studies while preserving the selected sort', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByRole('button', { name: 'Clinical digests' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Group by disease' }));
+    const cardIds = () =>
+      screen.getAllByRole('article').map((card) =>
+        within(card)
+          .getByRole('link', { name: /^PMID / })
+          .textContent?.replace('PMID ', ''),
+      );
+    const original = cardIds();
+    expect(original[0]).toBe('36007534');
+    await user.click(screen.getByRole('button', { name: 'Mark OPTION-DM as read' }));
+    expect(cardIds()).toEqual([...original.slice(1), original[0]]);
+    await user.click(screen.getByRole('button', { name: 'Mark OPTION-DM as unread' }));
+    expect(cardIds()).toEqual(original);
+
+    await user.click(screen.getByRole('button', { name: 'Mark HALO-CM as read' }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Sort by:' }), 'largest');
+    const largest = cardIds();
+    expect(largest[0]).toBe('32209650'); // PROMISE-2: largest unread sample.
+    expect(largest.at(-1)).toBe('29171818'); // HALO-CM: largest overall, already read.
+    const unreadSizes = largest
+      .slice(0, -1)
+      .map((id) => seedTrials.find((trial) => trial.id === id)!.sampleSize!);
+    expect(unreadSizes).toEqual([...unreadSizes].sort((a, b) => b - a));
+    await user.click(screen.getByRole('button', { name: 'Mark HALO-CM as unread' }));
+    expect(cardIds()[0]).toBe('29171818');
+  });
+  it('keeps disease collections inside unread-first bookmark sections', async () => {
+    const user = userEvent.setup();
+    const option = seedTrials.find((trial) => trial.acronym === 'OPTION-DM')!;
+    const senza = seedTrials.find((trial) => trial.acronym === 'SENZA-PDN')!;
+    const space = seedTrials.find((trial) => trial.acronym === 'SPACE')!;
+    for (const trial of [option, senza, space]) useLibrary.getState().toggleBookmark(trial);
+    useLibrary.getState().toggleRead(option);
+    useLibrary.getState().toggleRead(space);
+    renderPage();
+    await user.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Bookmarks 3' }),
+    );
+    const unread = screen.getByRole('region', { name: 'Unread publications' });
+    const read = screen.getByRole('region', { name: 'Already read publications' });
+    expect(unread.compareDocumentPosition(read) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(unread).getAllByRole('article')).toHaveLength(1);
+    expect(within(unread).getByRole('button', { name: senza.displayTitle })).toBeTruthy();
+    expect(
+      within(unread).getByRole('heading', { name: 'Painful diabetic neuropathy' }),
+    ).toBeTruthy();
+    expect(within(read).getAllByRole('article')).toHaveLength(2);
+    expect(within(read).getByRole('heading', { name: 'Painful diabetic neuropathy' })).toBeTruthy();
+    expect(within(read).getByRole('heading', { name: /Low back/ })).toBeTruthy();
+    const collections = within(screen.getByRole('group', { name: 'Bookmark disease collections' }));
+    await user.click(collections.getByRole('button', { name: 'Painful diabetic neuropathy 2' }));
+    expect(screen.getAllByRole('article')).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: space.displayTitle })).toBeNull();
+    expect(screen.getAllByRole('article')[0].textContent).toContain(senza.displayTitle);
+    expect(screen.getAllByRole('article')[1].textContent).toContain(option.displayTitle);
+  });
   it('filters by disease and displays sourced regimens in the digest', async () => {
     const user = userEvent.setup();
     renderPage();
