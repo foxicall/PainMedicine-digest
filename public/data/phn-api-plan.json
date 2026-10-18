@@ -1,0 +1,30 @@
+{
+  "mode": "dry-run",
+  "status": "planned",
+  "abstractCount": 155,
+  "maximumFulltextCount": 10,
+  "estimatedMaximumCostUSD": 1.9434957,
+  "conservativeReservedMaximumCostUSD": 2.6760276,
+  "actualCostThisInvocationUSD": 0.0,
+  "apiCallsThisInvocation": 0,
+  "budgetCapUSD": 10.0,
+  "pricing": {
+    "billingMode": "standard-synchronous",
+    "usdPerMillionTokens": {
+      "gpt-6-luna": {
+        "input": 0.1,
+        "output": 0.5
+      },
+      "gpt-6.1-sol": {
+        "input": 2.0,
+        "output": 10.0
+      }
+    },
+    "source": "https://developers.openai.com/api/docs/pricing",
+    "checkedOn": "2026-10-18",
+    "cachedInputDiscountApplied": false,
+    "note": "Reasoning tokens are included in billed output tokens; estimates are not actual charges."
+  },
+  "estimateMethod": "Input UTF-8 bytes / 3.5; maximum output tokens. Reservation uses input bytes + 1024.",
+  "note": "Preflight estimate only; no external model API request has run. Prices are synchronous Standard rates, not Batch rates. Raw full texts are not included."
+}

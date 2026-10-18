@@ -15,6 +15,7 @@ import { useLibrary } from '@/lib/store';
 import { vancouverCitation } from '@/lib/export';
 import { classifyDisease, diseaseLabel } from '@/lib/diseases';
 import { ReadingActions } from './ReadingActions';
+import { extractionContextLabels } from '@/lib/phn-pilot';
 
 export interface TrialCardProps {
   trial: ClinicalTrialSummary;
@@ -43,6 +44,7 @@ export function TrialCard({ trial: t, onOpen, notify }: TrialCardProps) {
       <div className="card-header">
         <div className="card-tags">
           <Pill tone={tone}>{t.specialties[0] ?? 'Pain medicine'}</Pill>
+          {t.extraction && <Pill tone="amber">Extraction draft</Pill>}
           {t.highImpact && (
             <span
               className="impact-badge"
@@ -54,6 +56,15 @@ export function TrialCard({ trial: t, onOpen, notify }: TrialCardProps) {
         </div>
       </div>
       <ReadingActions trial={t} />
+      {t.extraction && (
+        <div className="extraction-card-context">
+          <strong>{extractionContextLabels[t.extraction.clinicalContext]}</strong>
+          <span>
+            {t.extraction.sourceLevel === 'full-text' ? 'Full-text source' : 'Abstract source'}
+            {' · '}Needs clinical review
+          </span>
+        </div>
+      )}
       <div className="study-kicker">
         {t.acronym} <span>•</span> {t.year}
       </div>

@@ -46,9 +46,16 @@ import { EmptyState, Modal } from '@/components/ui';
 import { EvidenceWatch } from '@/components/EvidenceWatch';
 import { BookmarkCollections } from '@/components/BookmarkCollections';
 import { ReadingFilter, type ReadingStatus } from '@/components/ReadingActions';
+import { PhnPilot } from '@/components/PhnPilot';
+import { phnPilot, resolvePhnTrial } from '@/lib/phn-pilot';
 
 export default function Page() {
-  const [workspace, setWorkspace] = useState<'updates' | 'library'>('updates');
+  const [workspace, setWorkspace] = useState<'updates' | 'library' | 'pilot'>(() =>
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('view') === 'phn'
+      ? 'pilot'
+      : 'updates',
+  );
   const [filters, setFilters] = useState<TrialFilters>(defaultFilters);
   const [view, setView] = useState<'all' | 'saved'>('all');
   const [layout, setLayout] = useState<'grid' | 'list'>('grid');
@@ -77,7 +84,7 @@ export default function Page() {
     [],
   );
   const allTrials = useMemo(
-    () => mergeTrials(seedTrials, mergeTrials(imported, remoteTrials)),
+    () => mergeTrials(seedTrials, mergeTrials(imported, remoteTrials).map(resolvePhnTrial)),
     [imported, remoteTrials],
   );
   const savedTrials = useMemo(
@@ -110,7 +117,9 @@ export default function Page() {
   );
   const readCount = candidates.filter((t) => readSet.has(t.id)).length;
   const showGroups = view === 'saved' || grouped;
-  const comparisons = allTrials.filter((t) => compareIds.includes(t.id));
+  const comparisons = mergeTrials(allTrials, phnPilot.trials).filter((t) =>
+    compareIds.includes(t.id),
+  );
   const readingSections = useMemo(() => {
     const unread = visible.filter((t) => !readSet.has(t.id));
     const read = visible.filter((t) => readSet.has(t.id));
@@ -236,7 +245,7 @@ export default function Page() {
           </button>
         </div>
       </header>
-      <div className={`app-shell ${workspace === 'updates' ? 'updates-shell' : ''}`}>
+      <div className={`app-shell ${workspace !== 'library' ? 'updates-shell' : ''}`}>
         {workspace === 'library' && (
           <aside className="desktop-sidebar" aria-label="Filter trials">
             {view === 'saved' ? (
@@ -264,10 +273,20 @@ export default function Page() {
           )}
           {workspace === 'updates' ? (
             <EvidenceWatch
+              onOpenPilot={() => setWorkspace('pilot')}
               onOpenTrial={(trial) => {
                 onImport([trial]);
                 setSelectedTrial(trial);
               }}
+            />
+          ) : workspace === 'pilot' ? (
+            <PhnPilot
+              onOpenTrial={(trial) => {
+                onImport([trial]);
+                setSelectedTrial(trial);
+              }}
+              onBack={() => setWorkspace('updates')}
+              notify={notify}
             />
           ) : (
             <>
@@ -379,6 +398,14 @@ export default function Page() {
                     </p>
                   </div>
                   <div className="library-heading-actions">
+                    {view === 'all' && (
+                      <button
+                        className="button button-secondary"
+                        onClick={() => setWorkspace('pilot')}
+                      >
+                        <Sparkles size={15} /> PHN pilot <ArrowUpRight size={13} />
+                      </button>
+                    )}
                     <button className="button button-secondary" onClick={() => setDialog('pubmed')}>
                       <Database size={15} />
                       Explore PubMed <ArrowUpRight size={13} />

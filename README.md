@@ -237,3 +237,31 @@ All lists prioritize unread publications before already-read publications. Withi
 **Bookmarks** is a dedicated collection view, always grouped by disease, with per-disease counts and mobile disease navigation. Multi-condition studies appear once in the complete list and can be found under every applicable condition. Bookmarks include all publication years, including older guidelines and records that have aged out of the rolling feeds. Counts in the disease collections cover all bookmarks; reading-status counts reflect the current disease and search.
 
 The existing `pain-digest-library-v1` LocalStorage record now also stores `readIds`; old bookmarks and notes are preserved. These personal states stay in the same browser and are not synchronized across devices. CSV exports include read status and bookmark membership as well as disease labels, dosing, source links and notes.
+
+### PHN extraction pilot
+
+Open the **PHN pilot** callout in Evidence updates, the PHN pilot button in Clinical digests, or `?view=phn`. The 2026-10-18 source-assisted snapshot contains 155 candidate abstracts, 11 retrieved public full texts and 10 detailed drafts (9 established-PHN treatment reports and 1 acute-zoster prevention report). Candidate records also include protocols, mixed populations, nonrandomized studies and exclusions; 155 is not a count of eligible PHN RCTs. Two candidates fall outside the window by earliest publication date.
+
+The ten detailed reports include arm-specific drug titration, injectate concentration/volume, neuromodulation settings, source excerpts and explicit missing fields. The build checked 117 short excerpts against the exact collected source text. Excerpt matching establishes traceability, not clinical correctness. All reports remain **Extraction draft / needs clinical review**, without a formal RoB 2 rating or derived NNT/NNH. Counts randomized and analyzed, acute-zoster prevention, negative primary outcomes and inconsistent source reporting are retained separately.
+
+`data/phn-pilot.json` contains the published structured fields and screening decisions. Full source texts and raw responses stay outside the repository. The source index CSV and a sanitized API preflight report are in `public/data/phn-source-index.csv` and `public/data/phn-api-plan.json`. Read status, disease bookmarks, notes and comparisons work with pilot reports; saving/opening a pilot report adds it to the personal library without changing the 12-report starter collection.
+
+No external Luna/Sol model call has run for this snapshot: recorded API requests, tokens and API cost are all zero. `scripts/extract_phn_pilot.py` prepares the economical-abstract/strong-full-text workflow, with explicit execution, source-quote validation, resumable caching, per-request usage accounting and a US$10 pilot ceiling. It uses **Standard synchronous** rates, not the cheaper Batch rates. The current zero-call plan estimates US$1.94 at the configured maximum output lengths, with a conservative US$2.68 reservation; those are estimates, not incurred charges. No paid extraction is scheduled by the daily evidence workflow.
+
+```bash
+# Collect public sources without an LLM API key. The pilot query is date-fixed.
+python scripts/collect_phn_sources.py --fulltext-target 11
+
+# Rebuild the source-assisted cache from the retained screening decisions/drafts.
+# This stops if source identities, excerpt text, or candidate coverage do not match.
+python scripts/build_phn_pilot.py \
+  --sources /tmp/pain-phn-source-records.json \
+  --screening data/phn-pilot.json --drafts data/phn-pilot.json \
+  --fulltext-dir /tmp/pain-phn-fulltexts \
+  --csv public/data/phn-source-index.csv
+
+# Default is a zero-call dry run; no credential is read or required.
+python scripts/extract_phn_pilot.py --budget-usd 10
+```
+
+To run the paid pilot, configure a real OpenAI credential as server-side `OPENAI_API_KEY`, with its destination binding allowing `api.openai.com`, then add `--execute` to the last command. An NCBI key or a secret bound only to the NCBI host cannot authenticate OpenAI. Never put a key in `VITE_*`, the client bundle, Git, or a URL. Review source-supported API outputs before replacing the published drafts. See `docs/extraction-prompt.md` for the extraction schema, cache behavior and failure handling.

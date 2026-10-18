@@ -1,5 +1,6 @@
 import type { DiseaseId } from '@/lib/diseases';
 import type { TreatmentProtocol } from './protocol';
+import type { TrialExtraction } from './extraction';
 
 export const SPECIALTIES = [
   'Neuropathic Pain',
@@ -59,12 +60,13 @@ export interface ClinicalTrialSummary {
   provenance: {
     source: 'pubmed-abstract-seed' | 'pubmed-live';
     reviewedOn: string | null;
-    status: 'Abstract-based summary' | 'Awaiting appraisal';
+    status: 'Abstract-based summary' | 'Awaiting appraisal' | 'Extraction draft';
     sourceUrl: string;
   };
   abstract: string | null;
   // Optional to preserve older local bookmarks and unappraised PubMed imports.
   treatmentProtocol?: TreatmentProtocol;
+  extraction?: TrialExtraction;
 }
 
 export interface TrialFilters {

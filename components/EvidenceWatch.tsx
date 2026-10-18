@@ -15,6 +15,7 @@ import { classifyDisease, diseaseCounts, diseaseLabel, type DiseaseId } from '@/
 import { treatmentProtocols } from '@/data/treatment-protocols';
 import { DiseaseSelect } from './DiseaseSelect';
 import { ReadingActions, ReadingFilter, type ReadingStatus } from './ReadingActions';
+import { getPhnTrial } from '@/lib/phn-pilot';
 import { useLibrary } from '@/lib/store';
 import {
   eligibleMetric,
@@ -40,8 +41,10 @@ const timestamp = (value: string | null | undefined) =>
 
 export function EvidenceWatch({
   onOpenTrial,
+  onOpenPilot,
 }: {
   onOpenTrial: (trial: ClinicalTrialSummary) => void;
+  onOpenPilot?: () => void;
 }) {
   const query = useEvidence();
   const data = query.data;
@@ -153,6 +156,20 @@ export function EvidenceWatch({
           </a>
         </div>
       </div>
+      {onOpenPilot && (
+        <div className="pilot-callout">
+          <div>
+            <strong>Postherpetic neuralgia extraction pilot</strong>
+            <p>
+              Explore source-linked drafts, study doses and procedure details, with treatment and
+              prevention separated.
+            </p>
+          </div>
+          <button className="button button-secondary" onClick={onOpenPilot}>
+            Open PHN pilot <ArrowUpRight size={14} />
+          </button>
+        </div>
+      )}
       <div className="watch-tabs" role="group" aria-label="Evidence categories">
         {(
           [
@@ -403,7 +420,8 @@ export function EvidenceWatch({
         {records.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE).map((record) => {
           const metric = data.metrics.find((m) => m.id === record.metricId);
           const classification = classifyDisease(record);
-          const protocol = treatmentProtocols[record.pmid];
+          const pilot = getPhnTrial(record.pmid);
+          const protocol = pilot?.treatmentProtocol ?? treatmentProtocols[record.pmid];
           return (
             <article className="evidence-record" key={record.pmid}>
               <div className="record-journal">
@@ -438,7 +456,13 @@ export function EvidenceWatch({
                     : record.publicationTypes.filter((type) => type !== 'Journal Article')[0] ||
                       'Journal article'}
                 </span>
-                <span>{protocol ? 'Regimen sources checked' : 'Awaiting appraisal'}</span>
+                <span>
+                  {pilot
+                    ? 'Extraction draft · needs clinical review'
+                    : protocol
+                      ? 'Regimen sources checked'
+                      : 'Awaiting appraisal'}
+                </span>
                 {metric && (
                   <a href={metric.sourceUrl} target="_blank" rel="noreferrer">
                     JIF {metric.value} · {metric.year}
@@ -449,9 +473,11 @@ export function EvidenceWatch({
                 <div className="record-takeaway">
                   <strong>Clinical takeaway</strong>
                   <p>
-                    {protocol
-                      ? 'A curated digest is available with population, outcomes, safety and appraisal context.'
-                      : 'Awaiting clinical appraisal. Population, treatment regimen, effect estimates, safety and risk of bias have not been extracted automatically.'}
+                    {pilot
+                      ? `${pilot.bottomLine} Draft — needs clinical review.`
+                      : protocol
+                        ? 'A curated digest is available with population, outcomes, safety and appraisal context.'
+                        : 'Awaiting clinical appraisal. Population, treatment regimen, effect estimates, safety and risk of bias have not been extracted automatically.'}
                   </p>
                   <strong>Intervention & dosing</strong>
                   <p>

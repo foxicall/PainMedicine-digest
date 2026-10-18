@@ -15,6 +15,7 @@ import { Modal, Pill } from './ui';
 import { TreatmentProtocol } from './TreatmentProtocol';
 import { classifyDisease, diseaseLabel } from '@/lib/diseases';
 import { ReadingActions } from './ReadingActions';
+import { extractionContextLabels } from '@/lib/phn-pilot';
 
 export function TrialDetailModal({
   trial: t,
@@ -110,6 +111,26 @@ export function TrialDetailModal({
           <div className="detail-body">
             {tab === 'digest' && (
               <>
+                {t.extraction && (
+                  <div className="pilot-draft-notice" role="note">
+                    <FileText size={20} />
+                    <div>
+                      <strong>{t.extraction.reviewStatus}</strong>
+                      <p>
+                        {extractionContextLabels[t.extraction.clinicalContext]} ·{' '}
+                        {t.extraction.sourceLevel === 'full-text'
+                          ? 'Full-text source'
+                          : 'Abstract source'}
+                        {' · '}
+                        {t.extraction.method === 'source-assisted'
+                          ? 'Source-assisted extraction'
+                          : `External API extraction${t.extraction.model ? ` (${t.extraction.model})` : ''}`}
+                        . Check the source excerpts and missing fields before interpreting this
+                        draft.
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <div className="detail-takeaway">
                   <div className="section-eyebrow">CLINICAL BOTTOM LINE</div>
                   <p>{t.bottomLine}</p>
@@ -220,10 +241,45 @@ export function TrialDetailModal({
                     </div>
                   </dl>
                 </section>
+                {t.extraction && (
+                  <section
+                    className="extraction-evidence"
+                    aria-label="Extraction evidence and missing fields"
+                  >
+                    <h3>Source excerpts & extraction gaps</h3>
+                    <p className="muted">
+                      Excerpts support the fields shown below. They do not establish a formal
+                      risk-of-bias assessment or clinical review.
+                    </p>
+                    <div className="extraction-quotes">
+                      {t.extraction.evidence.map((item, index) => (
+                        <div key={`${item.field}-${index}`}>
+                          <h4>{item.field}</h4>
+                          <blockquote>{item.quote}</blockquote>
+                          <a href={item.sourceUrl} target="_blank" rel="noreferrer">
+                            {item.location} <ArrowUpRight size={12} />
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                    {t.extraction.missing.length > 0 && (
+                      <div className="protocol-gaps">
+                        <strong>Not established by this extraction</strong>
+                        <ul>
+                          {t.extraction.missing.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </section>
+                )}
                 <p className="provenance-note">
-                  {t.provenance.reviewedOn
-                    ? `Abstract-based seed summary · source retrieved ${t.provenance.reviewedOn}.`
-                    : 'Live PubMed metadata · awaiting clinical appraisal.'}{' '}
+                  {t.extraction
+                    ? `${t.extraction.method === 'source-assisted' ? 'Source-assisted' : 'External API'} extraction draft · needs clinical review.`
+                    : t.provenance.reviewedOn
+                      ? `Abstract-based seed summary · source retrieved ${t.provenance.reviewedOn}.`
+                      : 'Live PubMed metadata · awaiting clinical appraisal.'}{' '}
                   Consult the original paper before applying findings in practice.
                 </p>
               </>

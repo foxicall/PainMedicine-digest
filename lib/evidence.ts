@@ -3,6 +3,7 @@ import preview from '@/data/evidence-preview.json';
 import type { EvidenceRecord, EvidenceSnapshot, JournalMetric } from '@/types/evidence';
 import type { ClinicalTrialSummary } from '@/types/trial';
 import { seedTrials } from '@/data/seed-trials';
+import { getPhnTrial } from './phn-pilot';
 
 export function shiftMonths(day: Date, months: number) {
   const shifted = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth() + months, 1));
@@ -104,6 +105,8 @@ const NR = 'Awaiting extraction and clinical appraisal. Review the source paper.
 export function evidenceToTrial(record: EvidenceRecord): ClinicalTrialSummary {
   const curated = seedTrials.find((t) => t.pmid === record.pmid);
   if (curated) return curated;
+  const pilot = getPhnTrial(record.pmid);
+  if (pilot) return pilot;
   return {
     id: record.pmid,
     pmid: record.pmid,
