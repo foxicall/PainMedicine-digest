@@ -47,6 +47,7 @@ import { EvidenceWatch } from '@/components/EvidenceWatch';
 import { BookmarkCollections } from '@/components/BookmarkCollections';
 import { ReadingFilter, type ReadingStatus } from '@/components/ReadingActions';
 import { PhnPilot } from '@/components/PhnPilot';
+import { AppInstall } from '@/components/AppInstall';
 import { phnPilot, resolvePhnTrial } from '@/lib/phn-pilot';
 
 export default function Page() {
@@ -233,6 +234,7 @@ export default function Page() {
           </button>
         </nav>
         <div className="header-actions">
+          <AppInstall />
           <span className="header-caption">
             <span className="tiny-dot" /> Evidence into practice
           </span>

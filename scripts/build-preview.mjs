@@ -38,6 +38,9 @@ export async function buildPreview({
     return `data:${mime};base64,${(await readFile(path)).toString('base64')}`;
   };
   let html = await readFile(resolve(root, 'index.html'), 'utf8');
+  // Installation requires the hosted site. Portable file previews must not
+  // request a manifest or companion touch icon from an unrelated file origin.
+  html = html.replace(/<link\b[^>]*rel="(?:manifest|apple-touch-icon)"[^>]*>\s*/g, '');
   const scripts = [...html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"[^>]*>\s*<\/script>/g)];
   if (scripts.length !== 1)
     throw new Error('Expected one bundled entry script. Run npm run build first.');

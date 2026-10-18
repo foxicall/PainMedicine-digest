@@ -11,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-Open the local URL printed by Vite. No API key, account, or environment variables are needed. The 12-trial seed library works without calling a remote API; fonts are bundled locally. Initial asset delivery still requires the app server. This is not an installed offline PWA.
+Open the local URL printed by Vite. No API key, account, or environment variables are needed. The 12-trial seed library works without calling a remote API; fonts are bundled locally. Initial asset delivery still requires the app server. Installation does not add offline caching.
 
 ```bash
 npm test        # UI, filtering, exports, PubMed parsing, and persistence
@@ -33,6 +33,12 @@ Open the generated **`preview.html`** in Codex's HTML viewer or a browser. Produ
 Every CI run also uploads this file as the **`pain-medicine-preview`** artifact. In GitHub, open **Actions → Validate application → a successful run → Artifacts**, download the ZIP, and open its `preview.html`. This is a downloadable preview, not a public website deployment. Generated previews are ignored by Git; regenerate after source changes.
 
 A dev server running inside a remote cloud workspace is not automatically reachable at your computer's `localhost`. If Codex does not provide port forwarding, use the standalone preview or a deployed URL instead.
+
+## Install the web app
+
+The header's **App 安裝** button opens instructions for iPhone/iPad, Android, and desktop browsers. Chromium browsers expose a direct install button when they emit `beforeinstallprompt`; cancellation and failure retain the manual instructions. Safari users can use **Add to Home Screen** or **Add to Dock** where available. An `appinstalled` event or standalone display mode shows the installed state.
+
+`public/manifest.webmanifest` and the PNG icons use relative paths so installation works at the GitHub Pages project subpath. Installation requires the hosted HTTPS site or a supported local development origin. Standalone `preview.html` intentionally omits installation metadata; use it to review the interface, then use the hosted site for installation. No service-worker cache is added: network access is needed to load the site and refresh literature. Browser/app storage can differ, and bookmarks and notes do not synchronize across devices.
 
 ## Project structure
 

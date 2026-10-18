@@ -16,7 +16,7 @@ async function fixture(base = '/') {
   await mkdir(join(dist, 'assets'), { recursive: true });
   await writeFile(
     join(dist, 'index.html'),
-    `<html><head><link rel="icon" href="${base}favicon.svg"><script type="module" crossorigin src="${base}assets/app.js"></script><link rel="stylesheet" crossorigin href="${base}assets/app.css"></head><body><div id="root"></div></body></html>`,
+    `<html><head><link rel="manifest" href="${base}manifest.webmanifest"><link rel="apple-touch-icon" href="${base}icons/app-192.png"><link rel="icon" href="${base}favicon.svg"><script type="module" crossorigin src="${base}assets/app.js"></script><link rel="stylesheet" crossorigin href="${base}assets/app.css"></head><body><div id="root"></div></body></html>`,
   );
   await writeFile(
     join(dist, 'assets/app.js'),
@@ -44,6 +44,8 @@ describe('standalone preview packaging', () => {
       expect(html).toContain('data:image/svg+xml;base64,');
       expect(html).not.toMatch(/src="/);
       expect(html).not.toMatch(/url\(\/assets/);
+      expect(html).not.toContain('rel="manifest"');
+      expect(html).not.toContain('rel="apple-touch-icon"');
     },
   );
   it('rejects a future code-split build instead of producing a broken preview', async () => {
