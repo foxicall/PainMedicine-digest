@@ -1,0 +1,79 @@
+[
+  {
+    "id": "nejm",
+    "name": "New England Journal of Medicine",
+    "issns": ["0028-4793", "1533-4406"],
+    "value": 84.5,
+    "year": 2025,
+    "sourceUrl": "https://www.nejm.org/about-nejm/about-nejm",
+    "verifiedOn": "2026-10-18",
+    "verification": "official",
+    "note": "Official About page explicitly identifies the 2025 Journal Impact Factor."
+  },
+  {
+    "id": "lancet-neurology",
+    "name": "The Lancet Neurology",
+    "issns": ["1474-4422", "1474-4465"],
+    "value": 54.6,
+    "year": 2025,
+    "sourceUrl": "https://info.thelancet.com/laneur/request-access",
+    "verifiedOn": "2026-10-18",
+    "verification": "official",
+    "note": "Publisher page: 2025 Journal Citation Reports, Clarivate 2026. CiteScore is not used."
+  },
+  {
+    "id": "jama",
+    "name": "JAMA",
+    "issns": ["0098-7484", "1538-3598"],
+    "value": 55,
+    "year": 2024,
+    "sourceUrl": "https://jamanetwork.com/journals/jama/fullarticle/2847844",
+    "verifiedOn": "2026-10-18",
+    "verification": "official",
+    "note": "2025 Year in Review reports the 2024 JIF; a newer annual value has not been verified here."
+  },
+  {
+    "id": "jama-neurology",
+    "name": "JAMA Neurology",
+    "issns": ["2168-6149", "2168-6157"],
+    "value": 21.4,
+    "year": 2024,
+    "sourceUrl": "https://jamanetwork.com/journals/jamaneurology/fullarticle/2846475",
+    "verifiedOn": "2026-10-18",
+    "verification": "official",
+    "note": "2025 Year in Review explicitly reports the 2024 JIF; newer values without an explicit metric year are not substituted."
+  },
+  {
+    "id": "bja",
+    "name": "British Journal of Anaesthesia",
+    "issns": ["0007-0912", "1471-6771"],
+    "value": 10.3,
+    "year": 2025,
+    "sourceUrl": "https://www.bjanaesthesia.org/",
+    "verifiedOn": "2026-10-18",
+    "verification": "official",
+    "note": "Publisher announcement identifies 10.3 as the 2025 Impact Factor; verified from indexed official homepage text."
+  },
+  {
+    "id": "lancet",
+    "name": "The Lancet",
+    "issns": ["0140-6736", "1474-547X"],
+    "value": 109,
+    "year": 2025,
+    "sourceUrl": "https://www.linkedin.com/posts/the-lancet_rcts-clinicaltrials-clinicalresearch-activity-7477986859466428416-hAY3",
+    "verifiedOn": "2026-10-18",
+    "verification": "official",
+    "note": "Official Lancet Group announcement explicitly identifies 109.0, 2025 Journal Citation Reports, Clarivate 2026. Publisher metrics endpoint blocks automated access."
+  },
+  {
+    "id": "bmj",
+    "name": "The BMJ",
+    "issns": ["0959-8138", "1756-1833"],
+    "value": 55.1,
+    "year": 2025,
+    "sourceUrl": "https://bmjgroup.com/impact-report-accessible/",
+    "verifiedOn": "2026-10-18",
+    "verification": "official",
+    "note": "Official BMJ Group impact report gives 55.1 in the 2026 JCR release, corresponding to the 2025 JIF data year."
+  }
+]

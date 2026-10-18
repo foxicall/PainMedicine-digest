@@ -54,7 +54,7 @@ export function TrialDetailModal({
           <div className="detail-heading">
             <div className="card-tags">
               {t.specialties.map((s) => (
-                <Pill key={s} tone="teal">
+                <Pill key={s} tone="indigo">
                   {s}
                 </Pill>
               ))}

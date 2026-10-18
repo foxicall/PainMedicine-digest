@@ -37,6 +37,7 @@ describe('reading workflow', () => {
   it('searches, saves a trial, writes notes, and persists the library', async () => {
     const user = userEvent.setup();
     renderPage();
+    await user.click(screen.getByRole('button', { name: 'Clinical digests' }));
     await user.type(screen.getByRole('textbox', { name: 'Search trial library' }), 'OPTION-DM');
     expect(screen.getAllByRole('article')).toHaveLength(1);
     await user.click(screen.getByRole('button', { name: 'Save OPTION-DM' }));

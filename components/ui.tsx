@@ -43,7 +43,7 @@ export function Pill({
   tone = 'neutral',
 }: {
   children: ReactNode;
-  tone?: 'neutral' | 'teal' | 'purple' | 'amber' | 'blue';
+  tone?: 'neutral' | 'indigo' | 'purple' | 'amber' | 'blue';
 }) {
   return <span className={`pill pill-${tone}`}>{children}</span>;
 }

@@ -1,8 +1,11 @@
 node_modules/
 dist/
+preview.html
 *.tsbuildinfo
 .env*
 !.env.example
 coverage/
 test-results/
 *.log
+__pycache__/
+*.pyc

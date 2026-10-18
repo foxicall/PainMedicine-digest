@@ -1,0 +1,72 @@
+[
+  {
+    "id": "who-lbp",
+    "country": "International",
+    "organization": "WHO",
+    "title": "Non-surgical management of chronic primary low back pain",
+    "url": "https://www.who.int/publications/i/item/9789240081789",
+    "kind": "guideline",
+    "edition": "2023",
+    "note": "Adults in primary and community care; official edition, not a claim of a 2026 revision."
+  },
+  {
+    "id": "nice-ng193",
+    "country": "United Kingdom",
+    "organization": "NICE",
+    "title": "Chronic pain in over 16s: assessment and management (NG193)",
+    "url": "https://www.nice.org.uk/guidance/ng193",
+    "kind": "guideline",
+    "edition": "2021",
+    "note": "Check the official page for current status and subsequent amendments."
+  },
+  {
+    "id": "nice-pain",
+    "country": "United Kingdom",
+    "organization": "NICE",
+    "title": "Pain guidance and updates",
+    "url": "https://www.nice.org.uk/guidance/conditions-and-diseases/chronic-and-neuropathic-pain",
+    "kind": "directory",
+    "edition": null,
+    "note": "Guidance directory; linked guidance may address different populations and conditions."
+  },
+  {
+    "id": "cdc-opioids",
+    "country": "United States",
+    "organization": "CDC",
+    "title": "Prescribing opioids for pain — clinical practice guideline",
+    "url": "https://www.cdc.gov/mmwr/volumes/71/rr/rr7103a1.htm",
+    "kind": "guideline",
+    "edition": "2022",
+    "note": "Adult outpatient scope excludes sickle cell disease, cancer-related pain, palliative care and end-of-life care."
+  },
+  {
+    "id": "australia-lbp",
+    "country": "Australia",
+    "organization": "Australian Commission on Safety and Quality in Health Care",
+    "title": "Low Back Pain Clinical Care Standard",
+    "url": "https://www.safetyandquality.gov.au/standards/clinical-care-standards/low-back-pain-clinical-care-standard",
+    "kind": "care-standard",
+    "edition": "2022",
+    "note": "A national clinical care standard; not classified as a randomized trial."
+  },
+  {
+    "id": "japan-jspc",
+    "country": "Japan",
+    "organization": "Japan Society of Pain Clinicians",
+    "title": "Guidelines and professional resources",
+    "url": "https://www.jspc.gr.jp/iryou/iryou_link.html",
+    "kind": "directory",
+    "edition": null,
+    "note": "Japanese-language official directory. Draft/public-comment documents require status verification."
+  },
+  {
+    "id": "germany-awmf",
+    "country": "Germany",
+    "organization": "AWMF",
+    "title": "Current clinical guideline register",
+    "url": "https://register.awmf.org/de/leitlinien/aktuelle-leitlinien",
+    "kind": "directory",
+    "edition": null,
+    "note": "Official register; confirm validity and superseded/expired status on each guideline record."
+  }
+]

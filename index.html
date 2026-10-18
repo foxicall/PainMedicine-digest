@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#126b60" />
+    <meta name="theme-color" content="#4b5296" />
     <meta
       name="description"
       content="Explore pain medicine randomized trials with concise clinical takeaways, structured PICO summaries, and transparent study methods."
@@ -12,7 +12,35 @@
     <title>Pain Medicine Trial Digest · Evidence into practice</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main
+        style="
+          max-width: 640px;
+          margin: 15vh auto;
+          padding: 24px;
+          font-family: system-ui, sans-serif;
+          color: #303447;
+          line-height: 1.7;
+        "
+      >
+        <h1>Pain Medicine Trial Digest</h1>
+        <p>Clinical trials, international guidance, and recent pain medicine research.</p>
+        <p>
+          <a href="https://foxicall.github.io/PainMedicine-digest/" target="_blank" rel="noreferrer"
+            >Open the interactive website →</a
+          >
+        </p>
+        <p>
+          This file viewer has not started the interactive application. Use the website link
+          above, or open the generated <strong>preview.html</strong> for a readable preview.
+          For local development, start the application with <code>npm run dev</code>.
+        </p>
+      </main>
+    </div>
+    <noscript
+      >This trial library requires JavaScript. Enable JavaScript in your browser or preview
+      viewer.</noscript
+    >
     <script type="module" src="/app/main.tsx"></script>
   </body>
 </html>

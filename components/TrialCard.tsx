@@ -29,7 +29,7 @@ export function TrialCard({ trial: t, onOpen, notify }: TrialCardProps) {
       ? 'purple'
       : t.specialties[0] === 'Headache & Facial Pain'
         ? 'blue'
-        : 'teal';
+        : 'indigo';
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(vancouverCitation(t));
@@ -48,7 +48,7 @@ export function TrialCard({ trial: t, onOpen, notify }: TrialCardProps) {
               className="impact-badge"
               title="Included in the editorial journal list; not a study-quality rating"
             >
-              <Sparkles size={11} /> High impact
+              <Sparkles size={11} /> Editorial journal
             </span>
           )}
         </div>
