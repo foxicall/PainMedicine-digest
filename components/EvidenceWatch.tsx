@@ -13,6 +13,8 @@ import { createEvidenceSearch } from '@/lib/evidence-search';
 import { classifyDisease, diseaseCounts, diseaseLabel, type DiseaseId } from '@/lib/diseases';
 import { treatmentProtocols } from '@/data/treatment-protocols';
 import { DiseaseSelect } from './DiseaseSelect';
+import { ReadingActions, ReadingFilter, type ReadingStatus } from './ReadingActions';
+import { useLibrary } from '@/lib/store';
 import {
   eligibleMetric,
   evidenceToTrial,
@@ -48,6 +50,9 @@ export function EvidenceWatch({
   const [country, setCountry] = useState('All countries');
   const [rctOnly, setRctOnly] = useState(false);
   const [disease, setDisease] = useState<DiseaseId | 'all'>('all');
+  const [readingStatus, setReadingStatus] = useState<ReadingStatus>('all');
+  const readIds = useLibrary((s) => s.readIds);
+  const readSet = useMemo(() => new Set(readIds), [readIds]);
   const [page, setPage] = useState(0);
   const today = new Date().toISOString().slice(0, 10);
   const start =
@@ -86,7 +91,18 @@ export function EvidenceWatch({
     [eligibleRecords, disease],
   );
   const findRecords = useMemo(() => createEvidenceSearch(diseaseRecords), [diseaseRecords]);
-  const records = useMemo(() => findRecords(settledSearch), [findRecords, settledSearch]);
+  const candidates = useMemo(() => findRecords(settledSearch), [findRecords, settledSearch]);
+  const records = useMemo(
+    () =>
+      candidates.filter(
+        (r) => readingStatus === 'all' || readSet.has(r.pmid) === (readingStatus === 'read'),
+      ),
+    [candidates, readingStatus, readSet],
+  );
+  const readCount = useMemo(
+    () => candidates.filter((r) => readSet.has(r.pmid)).length,
+    [candidates, readSet],
+  );
   const pages = Math.max(1, Math.ceil(records.length / PAGE_SIZE));
   const currentPage = Math.min(page, pages - 1);
   const sources = data.sources.filter(
@@ -358,6 +374,19 @@ export function EvidenceWatch({
             : 'No age cutoff; older guidance can remain relevant'}
         </span>
       </div>
+      <div className="library-reading-toolbar">
+        <ReadingFilter
+          label="Updated evidence reading status"
+          value={readingStatus}
+          onChange={(value) => {
+            setReadingStatus(value);
+            setPage(0);
+          }}
+          total={candidates.length}
+          read={readCount}
+        />
+        <p>Read status and bookmarks are shared with your library.</p>
+      </div>
       <p className="watch-explanation">
         {tab === 'trials'
           ? 'Indexed clinical trials include randomized and non-randomized studies. Structured clinical summaries require appraisal; use “Open digest” to see available fields.'
@@ -448,6 +477,7 @@ export function EvidenceWatch({
                   </button>
                 )}
               </div>
+              <ReadingActions trial={evidenceToTrial(record)} />
             </article>
           );
         })}
@@ -456,7 +486,10 @@ export function EvidenceWatch({
         <div className="watch-empty">
           <Search size={24} />
           <h3>No eligible publications in this selection</h3>
-          <p>Broaden the search or check the retrieval and metric status above.</p>
+          <p>
+            Broaden the search, choose another disease or reading status, or check the retrieval
+            status above.
+          </p>
         </div>
       )}
       <div className="watch-pagination">

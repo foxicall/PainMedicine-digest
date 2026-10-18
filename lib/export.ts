@@ -15,7 +15,13 @@ export function csvCell(value: unknown) {
   return `"${safe.replace(/"/g, '""')}"`;
 }
 
-export function toCSV(trials: ClinicalTrialSummary[], notes: Record<string, string> = {}) {
+export function toCSV(
+  trials: ClinicalTrialSummary[],
+  notes: Record<string, string> = {},
+  personal: { readIds?: string[]; bookmarks?: string[] } = {},
+) {
+  const readIds = new Set(personal.readIds);
+  const bookmarks = new Set(personal.bookmarks);
   const headers = [
     'Trial',
     'Title',
@@ -24,6 +30,8 @@ export function toCSV(trials: ClinicalTrialSummary[], notes: Record<string, stri
     'Year',
     'PMID',
     'DOI',
+    'Read status',
+    'Bookmarked',
     'Diseases',
     'Disease classification basis',
     'Procedure and dosage by arm',
@@ -65,6 +73,8 @@ export function toCSV(trials: ClinicalTrialSummary[], notes: Record<string, stri
         t.year,
         t.pmid,
         t.doi,
+        readIds.has(t.id) ? 'Already read' : 'Unread',
+        bookmarks.has(t.id) ? 'Yes' : 'No',
         classifyDisease(t).ids.map(diseaseLabel).join('; '),
         classifyDisease(t).basis,
         protocolText(t.treatmentProtocol),

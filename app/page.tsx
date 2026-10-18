@@ -31,8 +31,9 @@ import {
   filterTrials,
   groupTrialsByDisease,
   mergeTrials,
+  searchTrials,
 } from '@/lib/trials';
-import { diseaseLabel } from '@/lib/diseases';
+import { classifyDisease, diseaseLabel } from '@/lib/diseases';
 import { downloadFile, toBibTeX, toCSV } from '@/lib/export';
 import { useLibrary } from '@/lib/store';
 import { TrialCard } from '@/components/TrialCard';
@@ -42,6 +43,8 @@ import { CompareModal } from '@/components/CompareModal';
 import { AskEvidenceModal, MethodologyModal, PubMedModal } from '@/components/EvidenceDialogs';
 import { EmptyState, Modal } from '@/components/ui';
 import { EvidenceWatch } from '@/components/EvidenceWatch';
+import { BookmarkCollections } from '@/components/BookmarkCollections';
+import { ReadingFilter, type ReadingStatus } from '@/components/ReadingActions';
 
 export default function Page() {
   const [workspace, setWorkspace] = useState<'updates' | 'library'>('updates');
@@ -50,6 +53,7 @@ export default function Page() {
   const [layout, setLayout] = useState<'grid' | 'list'>('grid');
   const [sort, setSort] = useState('newest');
   const [grouped, setGrouped] = useState(true);
+  const [readingStatus, setReadingStatus] = useState<ReadingStatus>('all');
   const [selectedTrial, setSelectedTrial] = useState<ClinicalTrialSummary | null>(null);
   const [dialog, setDialog] = useState<
     'pubmed' | 'ask' | 'methodology' | 'compare' | 'filters' | null
@@ -59,7 +63,9 @@ export default function Page() {
   const [storageError, setStorageError] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { bookmarks, notes, imported, compareIds, clearCompare, toggleCompare } = useLibrary();
+  const { bookmarks, readIds, notes, imported, compareIds, clearCompare, toggleCompare } =
+    useLibrary();
+  const readSet = useMemo(() => new Set(readIds), [readIds]);
   const notify = useCallback((message: string) => {
     setToast(message);
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -77,21 +83,39 @@ export default function Page() {
     () => allTrials.filter((t) => bookmarks.includes(t.id)),
     [allTrials, bookmarks],
   );
-  const visible = useMemo(() => {
-    const list = filterTrials(view === 'saved' ? savedTrials : allTrials, filters);
+  const candidates = useMemo(() => {
+    // A saved publication must remain accessible even after it ages out of a feed.
+    const list =
+      view === 'saved'
+        ? searchTrials(savedTrials, filters.query).filter(
+            (t) => filters.disease === 'all' || classifyDisease(t).ids.includes(filters.disease),
+          )
+        : filterTrials(allTrials, filters);
     if (sort === 'newest') return list.sort((a, b) => b.year - a.year);
     if (sort === 'oldest') return list.sort((a, b) => a.year - b.year);
     if (sort === 'largest') return list.sort((a, b) => (b.sampleSize ?? -1) - (a.sampleSize ?? -1));
     return list;
   }, [allTrials, savedTrials, filters, view, sort]);
+  const visible = useMemo(
+    () =>
+      candidates.filter(
+        (t) => readingStatus === 'all' || readSet.has(t.id) === (readingStatus === 'read'),
+      ),
+    [candidates, readingStatus, readSet],
+  );
+  const readCount = candidates.filter((t) => readSet.has(t.id)).length;
+  const showGroups = view === 'saved' || grouped;
   const comparisons = allTrials.filter((t) => compareIds.includes(t.id));
   const diseaseGroups = useMemo(
     () =>
-      grouped ? groupTrialsByDisease(visible, filters.disease) : [['All trials', visible] as const],
-    [visible, filters.disease, grouped],
+      showGroups
+        ? groupTrialsByDisease(visible, filters.disease)
+        : [['All trials', visible] as const],
+    [visible, filters.disease, showGroups],
   );
   const totalParticipants = seedTrials.reduce((sum, t) => sum + (t.sampleSize ?? 0), 0);
-  const filterCount = activeFilterCount(filters);
+  const filterCount =
+    view === 'saved' ? Number(filters.disease !== 'all') : activeFilterCount(filters);
 
   useEffect(() => {
     const shortcut = (event: KeyboardEvent) => {
@@ -113,15 +137,19 @@ export default function Page() {
   const exportLibrary = (format: 'csv' | 'bib') => {
     if (!visible.length) return;
     downloadFile(
-      format === 'csv' ? toCSV(visible, notes) : toBibTeX(visible),
+      format === 'csv' ? toCSV(visible, notes, { readIds, bookmarks }) : toBibTeX(visible),
       `pain-digest-${view}-${new Date().toISOString().slice(0, 10)}.${format}`,
       format === 'csv' ? 'text/csv;charset=utf-8' : 'application/x-bibtex',
     );
     notify(
-      `Exported ${visible.length} ${visible.length === 1 ? 'trial' : 'trials'} as ${format === 'csv' ? 'CSV' : 'BibTeX'}`,
+      `Exported ${visible.length} ${visible.length === 1 ? 'publication' : 'publications'} as ${format === 'csv' ? 'CSV' : 'BibTeX'}`,
     );
   };
   const changeView = (v: 'all' | 'saved') => {
+    if (v !== view || workspace !== 'library') {
+      setFilters(defaultFilters);
+      setReadingStatus('all');
+    }
     setWorkspace('library');
     setView(v);
   };
@@ -171,7 +199,7 @@ export default function Page() {
             onClick={() => changeView('saved')}
           >
             <Bookmark size={16} />
-            Saved trials
+            Bookmarks
             {bookmarks.length > 0 && <span className="nav-count">{bookmarks.length}</span>}
           </button>
           <button onClick={() => setDialog('methodology')}>
@@ -194,15 +222,29 @@ export default function Page() {
       <div className={`app-shell ${workspace === 'updates' ? 'updates-shell' : ''}`}>
         {workspace === 'library' && (
           <aside className="desktop-sidebar" aria-label="Filter trials">
-            <FilterSidebar
-              filters={filters}
-              onChange={setFilters}
-              trials={allTrials}
-              onMethodology={() => setDialog('methodology')}
-            />
+            {view === 'saved' ? (
+              <BookmarkCollections
+                trials={savedTrials}
+                disease={filters.disease}
+                onChange={(disease) => setFilters({ ...filters, disease })}
+              />
+            ) : (
+              <FilterSidebar
+                filters={filters}
+                onChange={setFilters}
+                trials={allTrials}
+                onMethodology={() => setDialog('methodology')}
+              />
+            )}
           </aside>
         )}
         <main id="main-content" className="main-content">
+          {storageError && (
+            <div className="error-banner" role="alert">
+              Browser storage is unavailable or full. Bookmarks, read status and notes are available
+              for this session only; export CSV from the library to keep a copy.
+            </div>
+          )}
           {workspace === 'updates' ? (
             <EvidenceWatch
               onOpenTrial={(trial) => {
@@ -212,105 +254,103 @@ export default function Page() {
             />
           ) : (
             <>
-              <section className="hero">
-                <div className="hero-copy">
-                  <div className="eyebrow">
-                    <span className="eyebrow-line" /> A CLINICAL EVIDENCE COMPANION
-                  </div>
-                  <h1>
-                    Better evidence.
-                    <br />
-                    <span>More informed care.</span>
-                  </h1>
-                  <p>
-                    Landmark pain medicine trials, distilled.
-                    <br className="desktop-break" /> Explore the findings. Understand the context.
-                    Inform your practice.
-                  </p>
-                  <div className="hero-footnote">
-                    <span>
-                      <Check size={13} /> Structured PICO summaries
-                    </span>
-                    <span>
-                      <Check size={13} /> Original sources
-                    </span>
-                  </div>
-                </div>
-                <button className="hero-aside" onClick={() => setDialog('methodology')}>
-                  <div className="hero-illustration" aria-hidden="true">
-                    <div className="illustration-orbit orbit-one" />
-                    <div className="illustration-orbit orbit-two" />
-                    <div className="paper-back" />
-                    <div className="paper-front">
-                      <span className="paper-label">THE CLINICAL DIGEST</span>
-                      <div className="paper-title-line" />
-                      <div className="paper-title-line short" />
-                      <div className="paper-chart">
-                        <span />
-                        <span />
-                        <span />
-                        <span />
-                        <span />
-                        <span />
+              {view === 'all' && (
+                <>
+                  <section className="hero">
+                    <div className="hero-copy">
+                      <div className="eyebrow">
+                        <span className="eyebrow-line" /> A CLINICAL EVIDENCE COMPANION
                       </div>
-                      <div className="paper-rule" />
-                      <div className="paper-lines" />
+                      <h1>
+                        Better evidence.
+                        <br />
+                        <span>More informed care.</span>
+                      </h1>
+                      <p>
+                        Landmark pain medicine trials, distilled.
+                        <br className="desktop-break" /> Explore the findings. Understand the
+                        context. Inform your practice.
+                      </p>
+                      <div className="hero-footnote">
+                        <span>
+                          <Check size={13} /> Structured PICO summaries
+                        </span>
+                        <span>
+                          <Check size={13} /> Original sources
+                        </span>
+                      </div>
                     </div>
-                    <span className="illustration-badge">
-                      <ShieldCheck size={22} />
-                    </span>
-                  </div>
-                  <div className="hero-aside-caption">
-                    <span>From paper to practice.</span>
-                    <ArrowUpRight size={16} />
-                  </div>
-                  <p>
-                    A little less reading.
-                    <br />A lot more understanding.
-                  </p>
-                </button>
-              </section>
-              <section className="stats-strip" aria-label="Library overview">
-                <div>
-                  <BookOpen size={19} />
-                  <span>
-                    <strong>{allTrials.length}</strong>
-                    <small>Trial reports</small>
-                  </span>
-                </div>
-                <div>
-                  <Users size={20} />
-                  <span>
-                    <strong>{totalParticipants.toLocaleString()}</strong>
-                    <small>Participants in seed reports*</small>
-                  </span>
-                </div>
-                <div>
-                  <Activity size={20} />
-                  <span>
-                    <strong>5</strong>
-                    <small>Subspecialties</small>
-                  </span>
-                </div>
-                <div className="year-stat">
-                  <CalendarDays size={20} />
-                  <span>
-                    <strong>2016–2026</strong>
-                    <small>Publication window</small>
-                  </span>
-                </div>
-              </section>
-              {storageError && (
-                <div className="error-banner" role="alert">
-                  Browser storage is unavailable or full. Changes are available for this session
-                  only; export CSV to preserve your notes.
-                </div>
+                    <button className="hero-aside" onClick={() => setDialog('methodology')}>
+                      <div className="hero-illustration" aria-hidden="true">
+                        <div className="illustration-orbit orbit-one" />
+                        <div className="illustration-orbit orbit-two" />
+                        <div className="paper-back" />
+                        <div className="paper-front">
+                          <span className="paper-label">THE CLINICAL DIGEST</span>
+                          <div className="paper-title-line" />
+                          <div className="paper-title-line short" />
+                          <div className="paper-chart">
+                            <span />
+                            <span />
+                            <span />
+                            <span />
+                            <span />
+                            <span />
+                          </div>
+                          <div className="paper-rule" />
+                          <div className="paper-lines" />
+                        </div>
+                        <span className="illustration-badge">
+                          <ShieldCheck size={22} />
+                        </span>
+                      </div>
+                      <div className="hero-aside-caption">
+                        <span>From paper to practice.</span>
+                        <ArrowUpRight size={16} />
+                      </div>
+                      <p>
+                        A little less reading.
+                        <br />A lot more understanding.
+                      </p>
+                    </button>
+                  </section>
+                  <section className="stats-strip" aria-label="Library overview">
+                    <div>
+                      <BookOpen size={19} />
+                      <span>
+                        <strong>{allTrials.length}</strong>
+                        <small>Trial reports</small>
+                      </span>
+                    </div>
+                    <div>
+                      <Users size={20} />
+                      <span>
+                        <strong>{totalParticipants.toLocaleString()}</strong>
+                        <small>Participants in seed reports*</small>
+                      </span>
+                    </div>
+                    <div>
+                      <Activity size={20} />
+                      <span>
+                        <strong>5</strong>
+                        <small>Subspecialties</small>
+                      </span>
+                    </div>
+                    <div className="year-stat">
+                      <CalendarDays size={20} />
+                      <span>
+                        <strong>2016–2026</strong>
+                        <small>Publication window</small>
+                      </span>
+                    </div>
+                  </section>
+                </>
               )}
               <section className="library-section" aria-label="Trial library">
                 <div className="library-heading">
                   <div>
                     <h2>
-                      {view === 'all' ? 'The trial library' : 'Your saved library'}
+                      {view === 'all' ? 'The trial library' : 'Your bookmarks'}
                       <span className="heading-count">
                         {view === 'all' ? allTrials.length : savedTrials.length}
                       </span>
@@ -318,7 +358,7 @@ export default function Page() {
                     <p>
                       {view === 'all'
                         ? 'Clinically relevant research. A consistent, clearer perspective.'
-                        : 'The evidence you want to return to. Notes stay in this browser.'}
+                        : 'Collected by disease. Track your reading and return to the evidence you saved.'}
                     </p>
                   </div>
                   <div className="library-heading-actions">
@@ -357,6 +397,17 @@ export default function Page() {
                     </DropdownMenu.Root>
                   </div>
                 </div>
+                <div className="library-reading-toolbar">
+                  <ReadingFilter
+                    value={readingStatus}
+                    onChange={setReadingStatus}
+                    total={candidates.length}
+                    read={readCount}
+                  />
+                  <p>
+                    Mark studies as read when you finish. Opening a digest keeps its current status.
+                  </p>
+                </div>
                 <div className="search-toolbar">
                   <div className="search-field">
                     <Search size={19} />
@@ -392,7 +443,7 @@ export default function Page() {
                       aria-pressed={view === 'all'}
                       onClick={() => changeView('all')}
                     >
-                      All trials <span>{allTrials.length}</span>
+                      All digests <span>{allTrials.length}</span>
                     </button>
                     <button
                       className={view === 'saved' ? 'active' : ''}
@@ -400,18 +451,20 @@ export default function Page() {
                       onClick={() => changeView('saved')}
                     >
                       <Bookmark size={14} />
-                      Saved <span>{savedTrials.length}</span>
+                      Bookmarks <span>{savedTrials.length}</span>
                     </button>
                   </div>
                   <div className="display-controls">
-                    <label className="group-disease-toggle">
-                      <input
-                        type="checkbox"
-                        checked={grouped}
-                        onChange={(e) => setGrouped(e.target.checked)}
-                      />
-                      Group by disease
-                    </label>
+                    {view === 'all' && (
+                      <label className="group-disease-toggle">
+                        <input
+                          type="checkbox"
+                          checked={grouped}
+                          onChange={(e) => setGrouped(e.target.checked)}
+                        />
+                        Group by disease
+                      </label>
+                    )}
                     <label htmlFor="sort-trials">Sort by:</label>
                     <select id="sort-trials" value={sort} onChange={(e) => setSort(e.target.value)}>
                       <option value="newest">Newest first</option>
@@ -442,7 +495,13 @@ export default function Page() {
                 <div className="results-row">
                   <p>
                     Showing <strong>{visible.length}</strong>{' '}
-                    {visible.length === 1 ? 'trial' : 'trials'}
+                    {view === 'saved'
+                      ? visible.length === 1
+                        ? 'bookmark'
+                        : 'bookmarks'
+                      : visible.length === 1
+                        ? 'trial'
+                        : 'trials'}
                     {filters.query && (
                       <>
                         {' '}
@@ -455,16 +514,24 @@ export default function Page() {
                     onClick={() => setDialog('filters')}
                   >
                     <SlidersHorizontal size={14} />
-                    Filters{filterCount > 0 ? ` (${filterCount})` : ''}
+                    {view === 'saved' ? 'Diseases' : 'Filters'}
+                    {filterCount > 0 ? ` (${filterCount})` : ''}
                   </button>
                   <span className="source-status">
                     <span className="tiny-dot" />
-                    Source-linked ·{' '}
-                    {remoteTrials.length ? 'Seed + PubMed records' : '12-study starter library'}
+                    {view === 'saved'
+                      ? 'Saved in this browser · All publication years'
+                      : `Source-linked · ${remoteTrials.length ? 'Seed + PubMed records' : '12-study starter library'}`}
                   </span>
                 </div>
-                {(filterCount > 0 || filters.query) && (
+                {(filterCount > 0 || filters.query || readingStatus !== 'all') && (
                   <div className="active-filters">
+                    {readingStatus !== 'all' && (
+                      <button onClick={() => setReadingStatus('all')}>
+                        {readingStatus === 'read' ? 'Already read' : 'Unread'}
+                        <X size={12} />
+                      </button>
+                    )}
                     {filters.disease !== 'all' && (
                       <button onClick={() => setFilters({ ...filters, disease: 'all' })}>
                         {diseaseLabel(filters.disease)}
@@ -520,14 +587,20 @@ export default function Page() {
                         <X size={12} />
                       </button>
                     )}
-                    <button className="clear-all" onClick={() => setFilters(defaultFilters)}>
+                    <button
+                      className="clear-all"
+                      onClick={() => {
+                        setFilters(defaultFilters);
+                        setReadingStatus('all');
+                      }}
+                    >
                       Clear all
                     </button>
                   </div>
                 )}
                 {visible.length ? (
                   <div className="disease-library-groups">
-                    {grouped && (
+                    {showGroups && (
                       <p className="grouping-note">
                         Grouped by study population. Studies with several conditions appear once;
                         all conditions remain searchable in the disease filter. Sorting applies
@@ -538,9 +611,9 @@ export default function Page() {
                       <section
                         key={name}
                         className="disease-library-group"
-                        aria-label={grouped ? name : 'All visible trials'}
+                        aria-label={showGroups ? name : 'All visible trials'}
                       >
-                        {grouped && (
+                        {showGroups && (
                           <div className="disease-group-heading">
                             <h3>{name}</h3>
                             <span>
@@ -572,19 +645,20 @@ export default function Page() {
                     }
                     title={
                       view === 'saved' && !savedTrials.length
-                        ? 'Your reading list starts here.'
-                        : 'No trials match these filters.'
+                        ? 'Your bookmarks start here.'
+                        : 'No publications match these filters.'
                     }
                     description={
                       view === 'saved' && !savedTrials.length
-                        ? 'Tap the bookmark on any trial to keep it here. Add personal notes in the study details.'
-                        : 'Try a broader search, adjust the year range, or clear your filters.'
+                        ? 'Choose Bookmark on any study or indexed publication. Your collection will be organized by disease.'
+                        : 'Try another disease or reading status, broaden your search, or clear the filters.'
                     }
                     action={
                       <button
                         className="button button-primary"
                         onClick={() => {
                           setFilters(defaultFilters);
+                          setReadingStatus('all');
                           if (!savedTrials.length) setView('all');
                         }}
                       >
@@ -704,12 +778,20 @@ export default function Page() {
         title="Refine evidence"
         description="Choose the studies that matter to you."
       >
-        <FilterSidebar
-          filters={filters}
-          onChange={setFilters}
-          trials={allTrials}
-          onMethodology={() => setDialog('methodology')}
-        />
+        {view === 'saved' ? (
+          <BookmarkCollections
+            trials={savedTrials}
+            disease={filters.disease}
+            onChange={(disease) => setFilters({ ...filters, disease })}
+          />
+        ) : (
+          <FilterSidebar
+            filters={filters}
+            onChange={setFilters}
+            trials={allTrials}
+            onMethodology={() => setDialog('methodology')}
+          />
+        )}
         <div className="mobile-filter-footer">
           <button className="button button-primary" onClick={() => setDialog(null)}>
             Show {visible.length} trials

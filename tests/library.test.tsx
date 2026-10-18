@@ -18,7 +18,7 @@ beforeEach(() => {
     },
   );
   localStorage.clear();
-  useLibrary.setState({ bookmarks: [], notes: {}, imported: [], compareIds: [] });
+  useLibrary.setState({ bookmarks: [], readIds: [], notes: {}, imported: [], compareIds: [] });
 });
 afterEach(() => {
   cleanup();
@@ -60,7 +60,7 @@ describe('reading workflow', () => {
     await user.click(screen.getByRole('button', { name: 'Clinical digests' }));
     await user.type(screen.getByRole('textbox', { name: 'Search trial library' }), 'OPTION-DM');
     expect(screen.getAllByRole('article')).toHaveLength(1);
-    await user.click(screen.getByRole('button', { name: 'Save OPTION-DM' }));
+    await user.click(screen.getByRole('button', { name: 'Bookmark OPTION-DM' }));
     await user.click(screen.getByRole('button', { name: 'Read digest' }));
     const dialog = within(screen.getByRole('dialog'));
     await user.click(dialog.getByRole('button', { name: 'My notes' }));
@@ -96,5 +96,63 @@ describe('reading workflow', () => {
     await useLibrary.persist.rehydrate();
     expect(useLibrary.getState().imported[0].pmid).toBe(remote.pmid);
     expect(useLibrary.getState().bookmarks).toContain(remote.id);
+  });
+  it('marks a study read in its digest and filters it without changing its bookmark', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByRole('button', { name: 'Clinical digests' }));
+    await user.type(screen.getByRole('textbox', { name: 'Search trial library' }), 'OPTION-DM');
+    await user.click(screen.getByRole('button', { name: 'Bookmark OPTION-DM' }));
+    await user.click(screen.getByRole('button', { name: 'Read digest' }));
+    expect(useLibrary.getState().readIds).toEqual([]);
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Mark OPTION-DM as read' }),
+    );
+    await user.keyboard('{Escape}');
+    expect(
+      screen.getByRole('button', { name: 'Mark OPTION-DM as unread' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    const reading = within(screen.getByRole('group', { name: 'Reading status' }));
+    await user.click(reading.getByRole('button', { name: 'Unread 0' }));
+    expect(screen.queryAllByRole('article')).toHaveLength(0);
+    await user.click(reading.getByRole('button', { name: 'Already read 1' }));
+    expect(screen.getAllByRole('article')).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: 'Mark OPTION-DM as unread' }));
+    expect(screen.queryAllByRole('article')).toHaveLength(0);
+    expect(useLibrary.getState().bookmarks).toContain('36007534');
+  });
+  it('always groups bookmarks by disease and includes archived publications', async () => {
+    const user = userEvent.setup();
+    const space = seedTrials.find((t) => t.acronym === 'SPACE')!;
+    const oldGuideline = {
+      ...seedTrials[0],
+      id: '12345',
+      pmid: '12345',
+      acronym: 'GUIDELINE',
+      title: 'Migraine practice guideline',
+      displayTitle: 'Migraine practice guideline',
+      year: 2010,
+      provenance: { ...seedTrials[0].provenance, source: 'pubmed-live' as const },
+    };
+    useLibrary.getState().toggleBookmark(space);
+    useLibrary.getState().toggleBookmark(oldGuideline);
+    renderPage();
+    await user.click(screen.getByRole('button', { name: 'Clinical digests' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Group by disease' }));
+    await user.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Bookmarks 2' }),
+    );
+    expect(screen.getAllByRole('article')).toHaveLength(2);
+    expect(screen.queryByRole('checkbox', { name: 'Group by disease' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Migraine — subtype unspecified' })).toBeTruthy();
+    const collections = within(screen.getByRole('group', { name: 'Bookmark disease collections' }));
+    await user.click(collections.getByRole('button', { name: 'Osteoarthritis 1' }));
+    expect(screen.getAllByRole('article')).toHaveLength(1);
+    expect(screen.getByRole('heading', { name: 'Osteoarthritis' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Remove bookmark for SPACE' }));
+    expect(screen.queryAllByRole('article')).toHaveLength(0);
+    await user.click(collections.getByRole('button', { name: 'All bookmarks 1' }));
+    expect(screen.getAllByRole('article')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Migraine practice guideline' })).toBeTruthy();
   });
 });

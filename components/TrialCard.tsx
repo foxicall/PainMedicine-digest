@@ -1,6 +1,5 @@
 import {
   ArrowUpRight,
-  Bookmark,
   Check,
   Copy,
   ExternalLink,
@@ -15,6 +14,7 @@ import { Pill } from './ui';
 import { useLibrary } from '@/lib/store';
 import { vancouverCitation } from '@/lib/export';
 import { classifyDisease, diseaseLabel } from '@/lib/diseases';
+import { ReadingActions } from './ReadingActions';
 
 export interface TrialCardProps {
   trial: ClinicalTrialSummary;
@@ -22,9 +22,8 @@ export interface TrialCardProps {
   notify: (message: string) => void;
 }
 export function TrialCard({ trial: t, onOpen, notify }: TrialCardProps) {
-  const { bookmarks, toggleBookmark, compareIds, toggleCompare } = useLibrary();
-  const saved = bookmarks.includes(t.id),
-    compared = compareIds.includes(t.id);
+  const { compareIds, toggleCompare } = useLibrary();
+  const compared = compareIds.includes(t.id);
   const tone =
     t.specialties[0] === 'Neuropathic Pain'
       ? 'purple'
@@ -53,18 +52,8 @@ export function TrialCard({ trial: t, onOpen, notify }: TrialCardProps) {
             </span>
           )}
         </div>
-        <button
-          className={`icon-button bookmark-button ${saved ? 'is-saved' : ''}`}
-          aria-label={`${saved ? 'Unsave' : 'Save'} ${t.acronym}`}
-          aria-pressed={saved}
-          onClick={() => {
-            toggleBookmark(t);
-            notify(saved ? 'Removed from saved trials' : 'Added to your saved library');
-          }}
-        >
-          <Bookmark size={19} fill={saved ? 'currentColor' : 'none'} />
-        </button>
       </div>
+      <ReadingActions trial={t} />
       <div className="study-kicker">
         {t.acronym} <span>•</span> {t.year}
       </div>

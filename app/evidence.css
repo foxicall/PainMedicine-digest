@@ -788,3 +788,185 @@
     padding: 12px;
   }
 }
+
+/* Reading progress and disease collections share the indigo/slate palette. */
+.reading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.reading-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid #dce0eb;
+  border-radius: 7px;
+  background: #fff;
+  color: #62697f;
+  font-size: 12px;
+  line-height: 1.3;
+  cursor: pointer;
+}
+.reading-action:hover {
+  background: #f3f3fa;
+  border-color: #b8bad4;
+}
+.reading-action.is-read {
+  background: #edf0f9;
+  border-color: #c8d0e7;
+  color: #485c87;
+}
+.reading-action.is-bookmarked {
+  background: #f0edf8;
+  border-color: #d2c9e7;
+  color: #675288;
+}
+.reading-action:focus-visible,
+.reading-filter button:focus-visible,
+.bookmark-collection-list button:focus-visible {
+  outline: 3px solid #c4c9ec;
+  outline-offset: 2px;
+}
+.trial-card > .reading-actions {
+  margin: 4px 0 17px;
+}
+.evidence-record > .reading-actions {
+  padding-top: 14px;
+  margin-top: 14px;
+  border-top: 1px solid #e8e9f0;
+}
+.detail-toolbar .reading-actions {
+  margin: 0;
+}
+.library-reading-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 0 20px;
+}
+.library-reading-toolbar p {
+  margin: 0;
+  max-width: 380px;
+  font-size: 11px;
+  line-height: 1.7;
+  color: #767b8c;
+}
+.reading-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.reading-filter button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 9px 12px;
+  border: 1px solid #e0e2ec;
+  border-radius: 7px;
+  background: #fff;
+  color: #70768b;
+  font-size: 12px;
+  cursor: pointer;
+}
+.reading-filter button.active {
+  background: #edeef8;
+  color: #4b4d7c;
+  border-color: #bcc0dd;
+  font-weight: 600;
+}
+.reading-filter button > span {
+  border-radius: 4px;
+  background: #f1f2f7;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.reading-filter button.active > span {
+  background: #e0e2f0;
+}
+.bookmark-collections {
+  padding: 30px 22px;
+}
+.bookmark-collections > p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #73798c;
+}
+.bookmark-collection-list {
+  display: grid;
+  gap: 7px;
+  margin: 22px 0;
+}
+.bookmark-collection-list button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  padding: 12px;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #626980;
+  background: transparent;
+  cursor: pointer;
+}
+.bookmark-collection-list button > span {
+  flex: 1;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.bookmark-collection-list button > strong {
+  font-size: 11px;
+  font-weight: 500;
+  color: #6d728b;
+}
+.bookmark-collection-list button:hover {
+  background: #f4f3f9;
+}
+.bookmark-collection-list button.active {
+  background: #edeaf6;
+  border-color: #e0daef;
+  color: #5c4d7c;
+}
+.bookmark-storage-note {
+  margin-top: 28px;
+  border-top: 1px solid #e3e2ed;
+  padding-top: 20px;
+  color: #77728b;
+}
+.bookmark-storage-note p {
+  font-size: 11px;
+  line-height: 1.8;
+}
+.trial-list .trial-card > .reading-actions {
+  grid-column: 1;
+}
+@media (max-width: 520px) {
+  .reading-filter {
+    gap: 4px;
+    width: 100%;
+  }
+  .reading-filter button {
+    flex: 1;
+    padding: 9px 7px;
+    gap: 5px;
+    font-size: 11px;
+  }
+  .reading-action {
+    min-height: 40px;
+  }
+  .library-reading-toolbar p {
+    font-size: 11px;
+  }
+  .bookmark-collections {
+    padding: 20px;
+  }
+}

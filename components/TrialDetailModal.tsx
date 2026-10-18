@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  Bookmark,
   Copy,
   ExternalLink,
   FileText,
@@ -15,6 +14,7 @@ import { vancouverCitation } from '@/lib/export';
 import { Modal, Pill } from './ui';
 import { TreatmentProtocol } from './TreatmentProtocol';
 import { classifyDisease, diseaseLabel } from '@/lib/diseases';
+import { ReadingActions } from './ReadingActions';
 
 export function TrialDetailModal({
   trial: t,
@@ -26,7 +26,7 @@ export function TrialDetailModal({
   notify: (s: string) => void;
 }) {
   const [tab, setTab] = useState<'digest' | 'notes' | 'source'>('digest');
-  const { bookmarks, toggleBookmark, notes, setNote } = useLibrary();
+  const { notes, setNote } = useLibrary();
   const copy = async () => {
     if (!t) return;
     try {
@@ -84,14 +84,7 @@ export function TrialDetailModal({
               <button className="button button-secondary small" onClick={copy}>
                 <Copy size={14} /> Copy citation
               </button>
-              <button
-                className="button button-secondary small"
-                aria-pressed={bookmarks.includes(t.id)}
-                onClick={() => toggleBookmark(t)}
-              >
-                <Bookmark size={14} fill={bookmarks.includes(t.id) ? 'currentColor' : 'none'} />
-                {bookmarks.includes(t.id) ? 'Saved' : 'Save trial'}
-              </button>
+              <ReadingActions trial={t} />
             </div>
           </div>
           <div className="detail-tabs" role="group" aria-label="Trial detail view">

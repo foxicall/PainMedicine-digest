@@ -107,7 +107,7 @@ export function evidenceToTrial(record: EvidenceRecord): ClinicalTrialSummary {
   return {
     id: record.pmid,
     pmid: record.pmid,
-    acronym: 'INDEXED TRIAL',
+    acronym: 'INDEXED PUBLICATION',
     title: record.title,
     displayTitle: record.title,
     authors: record.authors,
