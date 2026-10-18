@@ -126,6 +126,25 @@ export function PhnPilot({
             <dt>External model requests</dt>
             <dd>{execution.requests.toLocaleString()}</dd>
           </div>
+          {execution.plannedWorkflow && (
+            <div>
+              <dt>Planned extraction coverage</dt>
+              <dd>
+                {execution.plannedWorkflow.abstractCount.toLocaleString()} abstracts with{' '}
+                {execution.plannedWorkflow.abstractModel ?? 'model not configured'}; up to{' '}
+                {execution.plannedWorkflow.targetFulltextCount.toLocaleString()} selected full texts
+                with {execution.plannedWorkflow.fulltextModel ?? 'model not configured'}
+                {execution.plannedWorkflow.fulltextRatio !== null && (
+                  <>
+                    {' '}
+                    (~{execution.plannedWorkflow.fulltextRatio * 100}% of{' '}
+                    {execution.plannedWorkflow.candidateCount.toLocaleString()} candidate records)
+                  </>
+                )}
+                . Full-text coverage depends on screening, source availability and the spending cap.
+              </dd>
+            </div>
+          )}
           {execution.plannedMaxCostUsd !== undefined && (
             <div>
               <dt>Planned API reservation (estimate)</dt>

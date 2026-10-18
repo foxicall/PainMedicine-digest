@@ -246,11 +246,21 @@ The ten detailed reports include arm-specific drug titration, injectate concentr
 
 `data/phn-pilot.json` contains the published structured fields and screening decisions. Full source texts and raw responses stay outside the repository. The source index CSV and a sanitized API preflight report are in `public/data/phn-source-index.csv` and `public/data/phn-api-plan.json`. Read status, disease bookmarks, notes and comparisons work with pilot reports; saving/opening a pilot report adds it to the personal library without changing the 12-report starter collection.
 
-No external Luna/Sol model call has run for this snapshot: recorded API requests, tokens and API cost are all zero. `scripts/extract_phn_pilot.py` prepares the economical-abstract/strong-full-text workflow, with explicit execution, source-quote validation, resumable caching, per-request usage accounting and a US$10 pilot ceiling. It uses **Standard synchronous** rates, not the cheaper Batch rates. The current zero-call plan estimates US$1.94 at the configured maximum output lengths, with a conservative US$2.68 reservation; those are estimates, not incurred charges. No paid extraction is scheduled by the daily evidence workflow.
+The published drafts remain source-assisted; their recorded model requests, tokens and API cost are zero. The separate API connectivity test is recorded in `docs/phn-api-check.json` and does not promote those drafts to model-extracted results.
+
+`scripts/extract_phn_pilot.py` routes **all available candidate abstracts to Luna** (`gpt-6-luna`) and **approximately 10% of unique candidates to Sol** (`gpt-6.1-sol`) for full-text extraction. The target rounds up: **155 candidates → 16 full texts**. Preferred/curated PMIDs come first, then guidelines, RCTs and other reports, with newer papers first within ties. This is reading priority, not an evidence-quality rating. Full texts failing first-stage screening are replaced from the remaining local sources; unavailable, flagged or out-of-window sources cannot be promoted. Missing abstracts and a shortfall after screening are reported explicitly. `--fulltext-limit N` overrides the percentage; `0` disables full-text calls.
+
+Source-quote validation, resumable caching, per-request accounting and the **US$10 spending cap** remain in force. The current dry run has 155 abstracts and 20 local full-text candidates, of which at most 16 can be sent to Sol. It estimates US$2.83 at maximum output lengths, with a conservative US$4.01 reservation covering the most expensive possible replacements. These use **Standard synchronous** rates and are estimates, not incurred charges. No paid extraction is scheduled by the daily evidence workflow.
 
 ```bash
 # Collect public sources without an LLM API key. The pilot query is date-fixed.
-python scripts/collect_phn_sources.py --fulltext-target 11
+python scripts/collect_phn_sources.py
+# Optional: collect extra public full texts for screening replacements.
+python scripts/collect_phn_sources.py --fulltext-target 20
+
+# Zero-call dry run; publish only sanitized routing and cost estimates.
+python scripts/extract_phn_pilot.py --budget-usd 10 \
+  --public-plan public/data/phn-api-plan.json
 
 # Rebuild the source-assisted cache from the retained screening decisions/drafts.
 # This stops if source identities, excerpt text, or candidate coverage do not match.
@@ -258,10 +268,8 @@ python scripts/build_phn_pilot.py \
   --sources /tmp/pain-phn-source-records.json \
   --screening data/phn-pilot.json --drafts data/phn-pilot.json \
   --fulltext-dir /tmp/pain-phn-fulltexts \
-  --csv public/data/phn-source-index.csv
-
-# Default is a zero-call dry run; no credential is read or required.
-python scripts/extract_phn_pilot.py --budget-usd 10
+  --csv public/data/phn-source-index.csv \
+  --api-plan public/data/phn-api-plan.json
 ```
 
-To run the paid pilot, configure a real OpenAI credential as server-side `OPENAI_API_KEY`, with its destination binding allowing `api.openai.com`, then add `--execute` to the last command. An NCBI key or a secret bound only to the NCBI host cannot authenticate OpenAI. Never put a key in `VITE_*`, the client bundle, Git, or a URL. Review source-supported API outputs before replacing the published drafts. See `docs/extraction-prompt.md` for the extraction schema, cache behavior and failure handling.
+To run the paid pilot, configure an OpenAI credential as server-side `OPENAI_API_KEY`, with its destination binding allowing `api.openai.com`, and run `python scripts/extract_phn_pilot.py --execute --budget-usd 10`. For this environment's named binding, add `--api-key-env Painmedicine_KEY`; pass the variable name, never the key value. `--public-plan` is restricted to dry runs. An NCBI key cannot authenticate OpenAI. Never put a key in `VITE_*`, the client bundle, Git, or a URL. Review source-supported API outputs before replacing the published drafts. See `docs/extraction-prompt.md` for the schema, cache behavior and failure handling.

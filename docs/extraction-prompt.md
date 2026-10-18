@@ -16,23 +16,46 @@ texts in `/tmp/pain-phn-fulltexts/<PMID>.json`, collected separately by
 `/tmp/pain-phn-extraction-usage.json`; the private response cache is
 `/tmp/pain-phn-extraction-cache/`. These `/tmp` files are not deployed to the site.
 
-The current plan screens **155 abstracts** with `gpt-6-luna` and considers **10
-selected full texts** for `gpt-6.1-sol`. This count is based on source availability,
-not a claim that all 155 papers are eligible PHN treatment trials. Full-text
+The default plan extracts **all available abstracts** with `gpt-6-luna` and targets
+**ceil(10% of unique candidate records)** with `gpt-6.1-sol`: the current 155-record
+corpus targets **16 full texts**, with 20 locally retrieved candidates available.
+Missing abstracts are reported in `missingAbstractPmids` and do not trigger
+title-only model requests. The denominator includes all deduplicated candidates,
+not only eligible PHN trials or available full texts; an empty corpus targets zero.
+`--fulltext-limit N` overrides the percentage (including zero to disable stage two).
+The former fixed 10-text default and 20-text CLI ceiling no longer apply.
+
+`--fulltext-pmids` gives preferred PMIDs, followed by the retained curated priority
+list, guidelines, randomized trials and other reports. Newer publication dates
+and numeric PMIDs break ties. This order is deterministic reading priority, not
+a clinical evidence-quality rating. Explicit PMIDs are preferences, not an
+allowlist; other available texts can replace screening exclusions. Sources with
+integrity flags, dates outside the publication window or missing abstracts cannot
+be upgraded. Full-text
 upgrades require a source-validated first-stage result identifying established
 PHN treatment, PHN prevention, a separable mixed PHN population, or guideline
 context. Acute-zoster/prevention work remains explicitly distinguished from
 treatment of established PHN. Papers failing screening or quote validation are
-never silently promoted.
+never silently promoted. All available abstracts run before any full-text call.
+The runner walks the entire ranked local full-text pool after screening, replacing
+ineligible candidates until the target is reached or the pool is exhausted.
+Rejected full-text outputs still consume a selection slot and their token cost;
+they are never silently retried to fill the quota. The spending cap can stop either
+stage. `targetFulltextCount`, `availableFulltextCount`, `selectedFulltextPmids`,
+`validatedFulltextCount` and `fulltextShortfall` distinguish intent from completion.
+`status: completed` means the execution queue finished, not that every result passed.
 
 After verifying model access and the configured API credential's permission to
 reach `https://api.openai.com`, execution is an explicit separate operation:
 
 ```sh
 python scripts/extract_phn_pilot.py --execute --budget-usd 10
+# Use the environment's named secret binding, without exposing its value:
+python scripts/extract_phn_pilot.py --execute --budget-usd 10 --api-key-env Painmedicine_KEY
 ```
 
-Execution reads `OPENAI_API_KEY` from the environment. Never include that key in
+Execution reads `OPENAI_API_KEY`, or the variable named by `--api-key-env`, from
+the environment. Dry runs read neither credential. Never include that key in
 source files, arguments, reports, client-side code, or GitHub Pages. The request
 uses `store: false`; this parameter does not itself define every provider-level
 data-retention policy. Neither the error body nor HTTP headers are logged, since
@@ -49,8 +72,11 @@ assumed. Reasoning tokens are already included in output tokens and are not
 added a second time.
 
 With maximum 6,000 output tokens per abstract and 12,000 per full text, the
-155/10 plan estimates a maximum **$1.9435**. A deliberately pessimistic input-byte
-reservation raises the request budget reserve to **$2.6761**. These are **estimates,
+155/16 plan estimates a maximum **$2.8348**. A deliberately pessimistic input-byte
+reservation raises the request budget reserve to **$4.0077**. Each estimate includes
+all abstract tasks plus the most expensive possible 16 full texts from the current
+20-candidate pool, so replacements cannot exceed the planned reservation simply
+because their source is longer. These are **estimates,
 not actual charges**. Each response records actual input, output and reasoning
 usage and a price-based cost estimate. The provider's billing dashboard remains
 the authoritative charge record.
@@ -63,6 +89,23 @@ automatically. Progress is written after every result and a pending reserve is
 written before each request, preserving a conservative ledger after interruption.
 An unresolved or failed cache entry requires deliberate inspection before retry.
 Deleting the cache also deletes its historical ledger; retain it for this pilot.
+
+Use `--public-plan public/data/phn-api-plan.json` on a dry run to export only
+counts, routing, model names and estimates. Source units, payloads and extraction
+results remain private. The full private plan lists both initial and reserve
+candidates; its task costs should not all be added together, since at most the
+target count can be selected. Rebuilding the source-assisted snapshot with
+`--api-plan` copies planned coverage into the UI without changing the actual
+model-use or review status of the published drafts.
+
+## API connectivity check
+
+`docs/phn-api-check.json` records the separate small API test. The model-list
+endpoint succeeding does not prove the generation endpoint works. On an HTTP 401,
+stop and correct the server-side credential binding; do not treat it as a model
+result. After correcting authentication, a known 401 cache entry with zero actual
+cost and zero uncertain reserve may be deliberately archived before retrying.
+Never automatically remove pending or ambiguous entries, which may have been billed.
 
 ## Extraction and review
 

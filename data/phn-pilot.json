@@ -10,7 +10,7 @@
   "execution": {
     "mode": "source-assisted",
     "externalApiStatus": "not-run",
-    "note": "Source-assisted screening and full-text draft extraction. External Luna/Sol API calls have not run, so no API token usage or paid extraction cost is claimed. Source excerpts are traceable; this is not formal clinical appraisal.",
+    "note": "These published drafts use source-assisted screening and full-text extraction. No successful external model extraction or API token usage is included in this snapshot. Source excerpts are traceable; this is not formal clinical appraisal.",
     "models": {
       "screening": null,
       "fullText": null
@@ -19,8 +19,16 @@
     "inputTokens": 0,
     "outputTokens": 0,
     "costUsd": 0,
-    "plannedMaxCostUsd": 2.6760276,
-    "budgetCapUsd": 10.0
+    "plannedMaxCostUsd": 4.0076516,
+    "budgetCapUsd": 10.0,
+    "plannedWorkflow": {
+      "candidateCount": 155,
+      "abstractCount": 155,
+      "targetFulltextCount": 16,
+      "fulltextRatio": 0.1,
+      "abstractModel": "gpt-6-luna",
+      "fulltextModel": "gpt-6.1-sol"
+    }
   },
   "counts": {
     "candidates": 155,

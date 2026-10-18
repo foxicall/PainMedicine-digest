@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-18T07:55:13.755568+00:00",
+  "status": "authentication-failed",
+  "purpose": "User-requested paid API usability test; published clinical drafts are unchanged",
+  "modelListCheck": {
+    "httpStatus": 200,
+    "requestedModelsListed": ["gpt-6-luna", "gpt-6.1-sol"]
+  },
+  "generationChecks": [
+    {
+      "model": "gpt-6-luna",
+      "mode": "abstract-extraction",
+      "pmid": "30913164",
+      "attempts": 2,
+      "httpStatus": 401,
+      "result": "No model output or usage reported"
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "mode": "minimal-connectivity-check",
+      "attempts": 1,
+      "httpStatus": 401,
+      "errorCode": "invalid_api_key",
+      "result": "No model output or usage reported"
+    }
+  ],
+  "generationRequests": 3,
+  "successfulGenerations": 0,
+  "reportedTokenUsage": null,
+  "costFromReportedUsageUSD": 0.0,
+  "note": "Requests reached the generation endpoint but authentication failed. Full-text extraction and paid-model usability remain unverified. No response bodies, headers or credentials are included."
+}

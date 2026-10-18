@@ -64,6 +64,98 @@ class PHNExtractionTests(unittest.TestCase):
     def setUp(self):
         self.task = pilot.make_task(RECORD, 'gpt-6-luna')
 
+    def test_ratio_rounds_up_unique_corpus_size_and_count_override(self):
+        for count, expected in [(0, 0), (1, 1), (10, 1), (11, 2), (155, 16), (250, 25)]:
+            with self.subTest(count=count):
+                self.assertEqual(pilot.fulltext_target(count), expected)
+        self.assertEqual(pilot.fulltext_target(155, 0), 0)
+        self.assertEqual(pilot.fulltext_target(155, 10), 10)
+        self.assertEqual(pilot.fulltext_target(2, 20), 2)
+        with self.assertRaises(ValueError):
+            pilot.fulltext_target(155, -1)
+
+    def test_missing_abstract_is_reported_without_a_title_only_api_call(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            source = folder / 'records.json'
+            source.write_text(json.dumps([RECORD, RECORD, {**RECORD, 'pmid': '5678', 'abstract': ' '}]))
+            output = folder / 'usage.json'
+            public = folder / 'public.json'
+            with redirect_stdout(io.StringIO()):
+                pilot.main(['--input', str(source), '--fulltext-directory', str(folder / 'full'),
+                            '--output', str(output), '--public-plan', str(public)])
+            report = json.loads(output.read_text())
+            self.assertEqual(report['candidateCount'], 2)
+            self.assertEqual(report['abstractCount'], 1)
+            self.assertEqual(report['missingAbstractPmids'], ['5678'])
+            self.assertEqual(report['targetFulltextCount'], 1)
+            self.assertEqual(report['fulltextShortfallBeforeScreening'], 1)
+            sanitized = json.loads(public.read_text())
+            self.assertNotIn('tasks', sanitized)
+            self.assertNotIn('results', sanitized)
+            self.assertNotIn(RECORD['abstract'], public.read_text())
+
+    def test_fulltext_candidates_keep_replacements_and_exclude_known_flags(self):
+        records = [{**RECORD, 'pmid': str(i)} for i in range(100, 105)]
+        records[2]['withinPublicationWindow'] = False
+        records[3]['integrityFlags'] = ['Retracted Publication']
+        records[4]['abstract'] = ''
+        with tempfile.TemporaryDirectory() as directory:
+            for row in records:
+                (Path(directory) / (row['pmid'] + '.json')).write_text(json.dumps({**FULLTEXT, 'pmid': row['pmid']}))
+            abstracts, fulltexts = pilot.build_plan(records, directory, fulltext_pmids=['100', '100'])
+        self.assertEqual(len(abstracts), 4)
+        self.assertEqual([task['pmid'] for task in fulltexts], ['100', '101'])
+        report = pilot.new_report(abstracts, fulltexts, 10, candidate_count=len(records))
+        self.assertEqual(report['maximumFulltextCount'], 1)
+        self.assertEqual(report['reserveFulltextPmids'], ['101'])
+
+    def test_screening_replacement_preserves_quota_and_cached_resume(self):
+        rows = [{**RECORD, 'pmid': str(i)} for i in range(100, 104)]
+        abstracts = [pilot.make_task(row, 'gpt-6-luna') for row in rows]
+        fulltexts = [pilot.make_task(row, 'gpt-6.1-sol', {**FULLTEXT, 'pmid': row['pmid']}) for row in rows]
+
+        def request(task, key):
+            result = extraction('not-phn-treatment' if task['pmid'] == '100' else 'established-phn-treatment')
+            result['pmid'] = task['pmid']
+            return response(result)
+
+        requester = Mock(side_effect=request)
+        with tempfile.TemporaryDirectory() as directory:
+            report = pilot.new_report(abstracts, fulltexts, 10)
+            pilot.execute_plan(report, abstracts, fulltexts, directory, 'fixture', requester=requester)
+            self.assertEqual([task.args[0]['mode'] for task in requester.call_args_list], ['abstract'] * 4 + ['fulltext'])
+            self.assertEqual(report['selectedFulltextPmids'], ['101'])
+            self.assertEqual(report['validatedFulltextCount'], 1)
+            self.assertEqual(report['fulltextShortfall'], 0)
+            again = pilot.new_report(abstracts, fulltexts, 10)
+            pilot.execute_plan(again, abstracts, fulltexts, directory, 'fixture', requester=requester)
+            self.assertEqual(requester.call_count, 5)
+            self.assertEqual(again['selectedFulltextPmids'], ['101'])
+            self.assertEqual(again['apiCallsThisInvocation'], 0)
+
+    def test_zero_fulltext_override_and_exhausted_eligible_pool(self):
+        strong = pilot.make_task(RECORD, 'gpt-6.1-sol', FULLTEXT)
+        for limit, category in [(0, 'established-phn-treatment'), (1, 'not-phn-treatment')]:
+            with self.subTest(limit=limit), tempfile.TemporaryDirectory() as directory:
+                report = pilot.new_report([self.task], [strong], 10, fulltext_limit=limit)
+                requester = Mock(return_value=response(extraction(category)))
+                pilot.execute_plan(report, [self.task], [strong], directory, 'fixture', requester=requester)
+                requester.assert_called_once()
+                self.assertEqual(report['validatedFulltextCount'], 0)
+                self.assertEqual(report['fulltextShortfall'], limit)
+                self.assertEqual(report['status'], 'completed')
+
+    def test_estimate_reserves_most_expensive_possible_replacement(self):
+        short = pilot.make_task(RECORD, 'gpt-6.1-sol', FULLTEXT)
+        large = pilot.make_task({**RECORD, 'pmid': '5678'}, 'gpt-6.1-sol',
+                                {'pmid': '5678', 'bodyText': 'Long full text. ' * 10000})
+        report = pilot.new_report([self.task], [short, large], 10)
+        self.assertEqual(report['maximumFulltextCount'], 1)
+        self.assertEqual(report['availableFulltextCount'], 2)
+        self.assertAlmostEqual(report['conservativeReservedMaximumCostUSD'],
+                               self.task['reservedMaximumCostUSD'] + large['reservedMaximumCostUSD'])
+
     def test_exact_normalized_quote_and_required_clinical_evidence(self):
         result = extraction()
         result['evidence'][2]['quote'] = 'drug\u00a025 mg\n daily'

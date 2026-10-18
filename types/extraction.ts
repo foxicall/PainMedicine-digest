@@ -28,6 +28,14 @@ export interface ExtractionPilot {
     costUsd: number;
     plannedMaxCostUsd?: number;
     budgetCapUsd?: number;
+    plannedWorkflow?: {
+      candidateCount: number;
+      abstractCount: number;
+      targetFulltextCount: number;
+      fulltextRatio: number | null;
+      abstractModel: string | null;
+      fulltextModel: string | null;
+    };
   };
   counts: { candidates: number; abstracts: number; fullTexts: number; detailed: number };
   records: {
