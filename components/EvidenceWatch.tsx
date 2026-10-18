@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowUpRight,
   BookOpen,
@@ -9,7 +9,7 @@ import {
   RefreshCw,
   Search,
 } from 'lucide-react';
-import Fuse from 'fuse.js';
+import { createEvidenceSearch } from '@/lib/evidence-search';
 import {
   eligibleMetric,
   evidenceToTrial,
@@ -41,6 +41,7 @@ export function EvidenceWatch({
   const data = query.data;
   const [tab, setTab] = useState<Tab>('trials');
   const [search, setSearch] = useState('');
+  const [settledSearch, setSettledSearch] = useState('');
   const [country, setCountry] = useState('All countries');
   const [rctOnly, setRctOnly] = useState(false);
   const [page, setPage] = useState(0);
@@ -53,7 +54,11 @@ export function EvidenceWatch({
         : '1900-01-01';
   const feed = data.feeds[tab];
   const stale = !feed.lastSuccessAt || Date.now() - Date.parse(feed.lastSuccessAt) > 48 * 3600_000;
-  const records = useMemo(() => {
+  useEffect(() => {
+    const timer = setTimeout(() => setSettledSearch(search), 175);
+    return () => clearTimeout(timer);
+  }, [search]);
+  const eligibleRecords = useMemo(() => {
     let rows = feed.records.filter((r) => withinWindow(r, start, today));
     if (tab === 'recent')
       rows = rows.filter((r) =>
@@ -66,16 +71,10 @@ export function EvidenceWatch({
       );
     if (tab === 'trials' && rctOnly)
       rows = rows.filter((r) => r.publicationTypes.includes('Randomized Controlled Trial'));
-    if (search.trim())
-      rows = new Fuse(rows, {
-        keys: ['title', 'authors', 'journal', 'pmid'],
-        threshold: 0.3,
-        ignoreLocation: true,
-      })
-        .search(search)
-        .map((result) => result.item);
     return rows;
-  }, [feed.records, start, today, tab, rctOnly, search, data.metrics]);
+  }, [feed.records, start, today, tab, rctOnly, data.metrics]);
+  const findRecords = useMemo(() => createEvidenceSearch(eligibleRecords), [eligibleRecords]);
+  const records = useMemo(() => findRecords(settledSearch), [findRecords, settledSearch]);
   const pages = Math.max(1, Math.ceil(records.length / PAGE_SIZE));
   const currentPage = Math.min(page, pages - 1);
   const sources = data.sources.filter(
@@ -88,6 +87,7 @@ export function EvidenceWatch({
     setTab(value);
     setPage(0);
     setSearch('');
+    setSettledSearch('');
   };
 
   return (
