@@ -1,5 +1,6 @@
 node_modules/
 dist/
+preview.html
 *.tsbuildinfo
 .env*
 !.env.example

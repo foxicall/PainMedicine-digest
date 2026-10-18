@@ -12,7 +12,30 @@
     <title>Pain Medicine Trial Digest · Evidence into practice</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main
+        style="
+          max-width: 640px;
+          margin: 15vh auto;
+          padding: 24px;
+          font-family: system-ui, sans-serif;
+          color: #293e3b;
+          line-height: 1.7;
+        "
+      >
+        <h1>Pain Medicine Trial Digest</h1>
+        <p role="status">Loading the trial library…</p>
+        <p>
+          If this message remains, open the standalone <strong>preview.html</strong> file or start
+          the application with <code>npm run dev</code>. The source HTML and the multi-file
+          production build require a web server.
+        </p>
+      </main>
+    </div>
+    <noscript
+      >This trial library requires JavaScript. Enable JavaScript in your browser or preview
+      viewer.</noscript
+    >
     <script type="module" src="/app/main.tsx"></script>
   </body>
 </html>

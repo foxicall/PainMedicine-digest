@@ -19,6 +19,20 @@ npm run build  # strict TypeScript check and production build
 npm run preview
 ```
 
+## Codex or standalone HTML preview
+
+The source `index.html` points to TypeScript, and `dist/index.html` loads separate compiled assets. Opening either as an isolated HTML preview can leave the application unmounted. Use the dev-server URL when it is reachable from your browser, or build a portable preview:
+
+```bash
+npm run build:preview
+```
+
+Open the generated **`preview.html`** in Codex's HTML viewer or a browser. It embeds the complete application, CSS, fonts, and favicon; it needs no server or companion asset directory. JavaScript must be permitted by the viewer. The 12-trial seed works without network access; Explore PubMed still requires a connection. A sandboxed viewer may block clipboard access or LocalStorage; exports remain available for notes.
+
+Every CI run also uploads this file as the **`pain-medicine-preview`** artifact. In GitHub, open **Actions → Validate application → a successful run → Artifacts**, download the ZIP, and open its `preview.html`. This is a downloadable preview, not a public website deployment. Generated previews are ignored by Git; regenerate after source changes.
+
+A dev server running inside a remote cloud workspace is not automatically reachable at your computer's `localhost`. If Codex does not provide port forwarding, use the standalone preview or a deployed URL instead.
+
 ## Project structure
 
 ```text
